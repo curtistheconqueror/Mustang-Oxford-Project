@@ -546,6 +546,8 @@ function drawTransmission() {
   const activeForkId = state.gear === "6" ? "fork6" : state.gear === "5" || state.gear === "R" ? "fork56" : g.trans.fork === 0 ? "fork12" : g.trans.fork === 1 ? "fork34" : null;
   const activeForkX = { fork56: -1.55, fork34: -0.05, fork12: 1.24, fork6: 2.1 }[activeForkId] ?? 0.72;
   const sleeveShift = { R: 0.14, 5: -0.14, 3: -0.14, 4: 0.14, 1: 0.14, 2: -0.14, 6: 0.14 }[state.gear] || 0;
+  const activeSleeve = { fork56: "hub5R", fork34: "hub34", fork12: "hub12", fork6: "hub6" }[activeForkId];
+  const activeSleeveX = { hub5R: -1.55, hub34: -0.05, hub12: 1.24, hub6: 2.1 }[activeSleeve] ?? 0;
   const internalAlpha = state.caseMode === "case" ? 0.16 : 1;
   const labelInternals = state.caseMode !== "case";
   if (state.caseMode === "cutaway") {
@@ -583,6 +585,7 @@ function drawTransmission() {
     { id: "gear6", label: "6th", x: 2.1, r: 0.31, cr: 0.5 },
   ];
   pairs.forEach((p, index) => drawGearPair(p, activeGear === p.id, index, internalAlpha));
+  const activePair = pairs.find((p) => p.id === activeGear);
 
   drawReverseIdler(activeGear === "gearR", internalAlpha);
   drawHubSleeve("hub5R", "5/R Sleeve", -1.55, activeGear === "gear5" || activeGear === "gearR", activeForkId === "fork56" ? sleeveShift : 0, internalAlpha);
@@ -605,25 +608,63 @@ function drawTransmission() {
     flowLine([[0.8,0.78,-0.08],[2.8,0.78,-0.08]], "#41ff91", 6);
   }
   if (labelInternals) {
-    addLabel([-2.65,0.68,-0.08], "Input Shaft");
+    addLabel([-2.28,0.68,-0.08], "Input Shaft");
     addLabel([2.35,0.68,-0.08], "Output / Mainshaft");
     addLabel([1.95,-0.92,0.55], "Countershaft");
     addLabel([-1.12,1.26,-0.58], "Reverse Idler", "blue");
     addLabel([activeForkX,1.34,-0.42], "Active Shift Fork");
-    addInspectionMarker([-2.54,0.72,-0.62], "?", "Bearing sets");
+    addHotspot([-2.3,0.52,-0.08], "inputShaft", "IN");
+    addHotspot([2.35,0.52,-0.08], "outputShaft", "OUT");
+    addHotspot([1.95,-0.74,0.55], "countershaft", "CS");
+    addHotspot([-1.12,1.08,-0.58], "reverseIdler", "R", "inspect");
+    if (activePair) addHotspot([activePair.x,1.08,-0.08], activePair.id, state.gear);
+    if (activeForkId) addHotspot([activeForkX + sleeveShift,1.18,-0.42], activeForkId, "F");
+    if (activeSleeve) addHotspot([activeSleeveX + sleeveShift,0.82,-0.08], activeSleeve, "S");
+    addInspectionMarker([-2.28,0.72,-0.62], "?", "Bearing sets");
     addInspectionMarker([0.18,1.38,-0.72], "?", "Detents / interlock");
     addInspectionMarker([0.95,-0.96,0.92], "?", "Oil passages");
     addInspectionMarker([0.28,0.78,0.28], "?", "Synchro details");
+    addHotspot([-2.28,0.92,-0.62], "bearingSets", "?", "inspect");
+    addHotspot([0.18,1.56,-0.72], "detentSystem", "?", "inspect");
+    addHotspot([0.95,-0.78,0.92], "oilPassages", "?", "inspect");
+    addHotspot([0.28,0.94,0.28], "synchroDetails", "?", "inspect");
   } else {
     addLabel([0,1.08,-0.58], "Assembled MT82 Case");
     addInspectionMarker([-2.25,0.95,-0.7], "?", "Case ribs / seals");
     addInspectionMarker([-2.9,0.62,-0.16], "?", "Clutch input interface");
+    addHotspot([0,0.86,-0.58], "case", "CASE");
+    addHotspot([-2.25,1.14,-0.7], "caseRibs", "?", "inspect");
+    addHotspot([-2.9,0.82,-0.16], "clutchInterface", "?", "inspect");
   }
 }
 
 function addInspectionMarker(pos, symbol, text) {
   if (!state.labels) return;
   addLabel(pos, `${symbol} ${text}`, "inspect");
+}
+
+function projectToScreen(pos) {
+  const clip = multiplyVec(viewProj, [pos[0], pos[1], pos[2], 1]);
+  if (clip[3] <= 0) return null;
+  return {
+    x: (clip[0] / clip[3] * 0.5 + 0.5) * canvas.clientWidth,
+    y: (-clip[1] / clip[3] * 0.5 + 0.5) * canvas.clientHeight,
+  };
+}
+
+function addHotspot(pos, componentId, text, className = "") {
+  if (!state.labels || !componentCatalog[componentId]) return;
+  const point = projectToScreen(pos);
+  if (!point) return;
+  const el = document.createElement("button");
+  el.type = "button";
+  el.className = `scene-hotspot ${className} ${componentId === state.selectedComponent ? "active" : ""}`;
+  el.dataset.hotspotComponent = componentId;
+  el.textContent = text;
+  el.title = componentCatalog[componentId].name;
+  el.style.left = `${point.x}px`;
+  el.style.top = `${point.y}px`;
+  labels.appendChild(el);
 }
 
 function drawShaft(id, from, to, color, alpha = 1) {
@@ -713,15 +754,13 @@ function drawClutch() {
 
 function addLabel(pos, text, className = "") {
   if (!state.labels && className !== "mini") return;
-  const clip = multiplyVec(viewProj, [pos[0], pos[1], pos[2], 1]);
-  if (clip[3] <= 0) return;
-  const x = (clip[0] / clip[3] * 0.5 + 0.5) * canvas.clientWidth;
-  const y = (-clip[1] / clip[3] * 0.5 + 0.5) * canvas.clientHeight;
+  const point = projectToScreen(pos);
+  if (!point) return;
   const el = document.createElement("span");
   el.className = `scene-label ${className}`;
   el.textContent = text;
-  el.style.left = `${x}px`;
-  el.style.top = `${y}px`;
+  el.style.left = `${point.x}px`;
+  el.style.top = `${point.y}px`;
   labels.appendChild(el);
 }
 
@@ -920,10 +959,19 @@ document.getElementById("gearCards").innerHTML = stripGears.map((g) => {
     <span class="gear-copy">${config.cardBody}</span>
   </button>`;
 }).join("");
+labels.addEventListener("pointerdown", (e) => {
+  const hotspotComponent = e.target.closest("[data-hotspot-component]")?.dataset.hotspotComponent;
+  if (!hotspotComponent) return;
+  e.preventDefault();
+  e.stopPropagation();
+  state.selectedComponent = hotspotComponent;
+  renderUi();
+});
 document.addEventListener("click", (e) => {
   const view = e.target.closest("[data-view]")?.dataset.view; if (view) setView(view);
   const gear = e.target.closest("[data-gear]")?.dataset.gear; if (gear) selectGear(gear);
   const cardGear = e.target.closest("[data-card-gear]")?.dataset.cardGear; if (cardGear) selectGear(cardGear);
+  const hotspotComponent = e.target.closest("[data-hotspot-component]")?.dataset.hotspotComponent; if (hotspotComponent) { state.selectedComponent = hotspotComponent; renderUi(); }
   const component = e.target.closest("[data-component]")?.dataset.component; if (component) { state.selectedComponent = component; renderUi(); }
   const step = e.target.closest("[data-step]")?.dataset.step; if (step) { state.step = Number(step); renderUi(); }
 });
