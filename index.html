@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Performance Build Visualizer</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="hero-panel panel">
+        <div class="brand">
+          <span class="brand-icon">5.0</span>
+          <div>
+            <strong>Performance Build Visualizer</strong>
+            <span>2012 Mustang GT 5.0 / manual shifter, linkage, transmission, clutch</span>
+          </div>
+        </div>
+        <div class="hero-readout">
+          <span id="viewName">Shifter View</span>
+          <strong id="selectedGear">Selected: Neutral</strong>
+        </div>
+      </header>
+
+      <section class="motion-strip panel">
+        <div class="strip-title">
+          <span>1. Shifter Movement</span>
+          <strong>6-Speed Pattern / Reverse Before 1st</strong>
+        </div>
+        <div class="gear-cards" id="gearCards"></div>
+      </section>
+
+      <aside class="left-panel panel">
+        <div class="panel-kicker">Interactive Views</div>
+        <div class="system-stack" id="views"></div>
+        <div class="panel-kicker">Controls</div>
+        <div class="toggle-grid">
+          <button id="labelsBtn" class="active" title="Toggle labels">Labels</button>
+          <button id="cutawayBtn" class="active" title="Toggle transparent cutaway">Cutaway</button>
+          <button id="flowBtn" class="active" title="Toggle power flow arrows">Flow</button>
+          <button id="clutchBtn" title="Press or release clutch">Clutch</button>
+        </div>
+        <div class="park-note">
+          <h2>5. Why There Is No Park Gear</h2>
+          <p>Manual transmissions do not have a dedicated Park position like automatics.</p>
+          <p>The car is held by the parking brake and, as backup, by leaving it in 1st gear or reverse depending on slope.</p>
+          <strong>Never rely on gear alone. Always use the parking brake.</strong>
+        </div>
+      </aside>
+
+      <section class="viewport-wrap">
+        <div class="viewport-topbar">
+          <div>
+            <span id="sectionTitle">2. Top View - Shift Linkage & Mechanism</span>
+            <strong id="sectionSubtitle">Left/right selects the gate. Forward/back engages the gear.</strong>
+          </div>
+          <div class="gear-buttons" id="gears"></div>
+        </div>
+        <div class="canvas-card">
+          <div class="canvas-badge" id="canvasBadge">3D Interactive Model</div>
+          <canvas id="scene"></canvas>
+          <div id="labelLayer" class="label-layer"></div>
+        </div>
+        <div class="timeline panel">
+          <button id="prevStep" title="Step back">&lt;</button>
+          <button id="playBtn" class="play" title="Play or pause">Play</button>
+          <button id="nextStep" title="Step forward">&gt;</button>
+          <button id="resetBtn" title="Reset">Reset</button>
+          <div class="step-track" id="steps"></div>
+        </div>
+      </section>
+
+      <aside class="right-panel panel">
+        <div class="panel-kicker">Selected Component</div>
+        <div class="readout">
+          <span>Current Step</span>
+          <strong id="currentStep">Clutch pedal presses down</strong>
+        </div>
+        <section>
+          <h2 id="gearTitle">Neutral</h2>
+          <p id="gearExplanation"></p>
+        </section>
+        <section>
+          <h2>Correct Path</h2>
+          <div class="path-list" id="pathList"></div>
+        </section>
+        <section>
+          <h2>Component Info</h2>
+          <p id="viewHelp"></p>
+        </section>
+        <section>
+          <h2>MT82 Component Map</h2>
+          <div class="component-list" id="componentList"></div>
+          <p class="component-detail" id="componentDetail"></p>
+        </section>
+        <section>
+          <h2>Phase B Sanity Check</h2>
+          <div class="sanity-grid" id="sanityGrid"></div>
+          <div class="deferred-list" id="deferredList"></div>
+        </section>
+        <section>
+          <h2>Clutch State</h2>
+          <p id="clutchText"></p>
+        </section>
+        <section>
+          <h2>Signal Legend</h2>
+          <div class="legend-grid">
+            <span><i class="legend-dot blue"></i>Mechanical motion</span>
+            <span><i class="legend-dot red"></i>Hydraulic pressure</span>
+            <span><i class="legend-dot green"></i>Power flow</span>
+          </div>
+        </section>
+        <section>
+          <h2>System Status</h2>
+          <div class="status-grid">
+            <span>Gate</span><strong id="gateStatus">Center</strong>
+            <span>Selector</span><strong id="selectorStatus">Centered</strong>
+            <span>Shift Rod</span><strong id="shiftRodStatus">Centered</strong>
+            <span>Collar</span><strong id="collarStatus">Open</strong>
+            <span>Display</span><strong id="displayStatus">Cutaway</strong>
+            <span>Power</span><strong id="powerStatus">Available</strong>
+          </div>
+        </section>
+        <section>
+          <h2>How It Works</h2>
+          <ol class="how-list">
+            <li>You move the shifter.</li>
+            <li>The linkage moves the shift fork.</li>
+            <li>The fork slides the locking collar.</li>
+            <li>The synchronizer ring matches speeds.</li>
+            <li>The collar locks the gear to the shaft.</li>
+            <li>Power is delivered to the output shaft.</li>
+          </ol>
+        </section>
+      </aside>
+    </main>
+    <script type="module" src="./src/app.js?v=mt82-sanity-b1s4"></script>
+  </body>
+</html>

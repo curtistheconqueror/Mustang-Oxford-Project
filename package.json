@@ -1,0 +1,9 @@
+{
+  "name": "performance-build-visualizer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "python -m http.server 5182 --bind 127.0.0.1"
+  }
+}
