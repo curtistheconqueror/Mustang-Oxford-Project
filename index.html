@@ -40,6 +40,7 @@
           <button id="cutawayBtn" class="active" title="Toggle transparent cutaway">Cutaway</button>
           <button id="flowBtn" class="active" title="Toggle power flow arrows">Flow</button>
           <button id="clutchBtn" title="Press or release clutch">Clutch</button>
+          <button id="focusBtn" title="Dim surrounding parts around the selected component">Focus</button>
         </div>
         <div class="park-note">
           <h2>5. Why There Is No Park Gear</h2>
@@ -61,6 +62,7 @@
           <div class="canvas-badge" id="canvasBadge">3D Interactive Model</div>
           <canvas id="scene"></canvas>
           <div id="labelLayer" class="label-layer"></div>
+          <div id="inspectionTooltip" class="inspection-tooltip" hidden></div>
         </div>
         <div class="timeline panel">
           <button id="prevStep" title="Step back">&lt;</button>
@@ -91,6 +93,7 @@
         </section>
         <section>
           <h2>MT82 Component Map</h2>
+          <div class="inspection-card" id="inspectionCard"></div>
           <div class="component-list" id="componentList"></div>
           <p class="component-detail" id="componentDetail"></p>
         </section>
@@ -135,6 +138,6 @@
         </section>
       </aside>
     </main>
-    <script type="module" src="./src/app.js?v=mt82-hotspots-c1s1"></script>
+    <script type="module" src="./src/app.js?v=mt82-inspection-c1s2"></script>
   </body>
 </html>

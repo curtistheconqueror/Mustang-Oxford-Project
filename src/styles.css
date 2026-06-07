@@ -296,6 +296,10 @@ button {
   grid-template-columns: 1fr 1fr;
 }
 
+.toggle-grid #focusBtn {
+  grid-column: 1 / -1;
+}
+
 .toggle-grid button {
   display: flex;
   align-items: center;
@@ -566,6 +570,39 @@ p {
   padding-right: 3px;
 }
 
+.inspection-card {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 8px;
+  padding: 9px;
+  border: 1px solid rgba(255, 209, 102, 0.32);
+  border-radius: 6px;
+  background:
+    linear-gradient(90deg, rgba(255, 209, 102, 0.12), rgba(105, 208, 255, 0.04)),
+    rgba(13, 18, 24, 0.86);
+}
+
+.inspection-card span {
+  color: #72d3ff;
+  font-size: 0.66rem;
+  font-weight: 900;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.inspection-card strong {
+  color: #ffffff;
+  font-size: 0.88rem;
+  line-height: 1.18;
+}
+
+.inspection-card em {
+  color: #ffe29a;
+  font-size: 0.76rem;
+  font-style: normal;
+  line-height: 1.25;
+}
+
 .component-list button,
 .deferred-list button {
   display: grid;
@@ -745,6 +782,47 @@ p {
   border-color: rgba(255, 209, 102, 0.86);
   background: rgba(42, 31, 6, 0.9);
   color: #ffe29a;
+}
+
+.inspection-tooltip {
+  position: absolute;
+  z-index: 8;
+  display: grid;
+  gap: 3px;
+  max-width: min(250px, calc(100% - 30px));
+  padding: 8px 10px;
+  border: 1px solid rgba(105, 208, 255, 0.62);
+  border-radius: 6px;
+  background: rgba(4, 11, 17, 0.94);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.42), 0 0 18px rgba(77, 177, 255, 0.18);
+  color: #e7f6ff;
+  pointer-events: none;
+  transform: translate(0, 0);
+}
+
+.inspection-tooltip[hidden] {
+  display: none;
+}
+
+.inspection-tooltip span {
+  color: #72d3ff;
+  font-size: 0.64rem;
+  font-weight: 900;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.inspection-tooltip strong {
+  color: #ffffff;
+  font-size: 0.82rem;
+  line-height: 1.16;
+}
+
+.inspection-tooltip em {
+  color: #ffe29a;
+  font-size: 0.72rem;
+  font-style: normal;
+  line-height: 1.2;
 }
 
 @media (max-width: 1220px) {

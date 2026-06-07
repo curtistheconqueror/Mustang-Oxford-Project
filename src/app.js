@@ -45,6 +45,14 @@ const componentCatalog = {
 
 const baseComponentIds = ["case", "bellhousing", "inputShaft", "countershaft", "outputShaft", "selectorRod", "shiftRod"];
 const deferredComponentIds = ["bearingSets", "detentSystem", "caseRibs", "oilPassages", "clutchInterface", "synchroDetails"];
+const deeperInspectionLabels = {
+  bearingSets: "Viewable in bearing close-up",
+  detentSystem: "Viewable in shift-rail close-up",
+  caseRibs: "Viewable in case shell layer",
+  oilPassages: "Viewable in lubrication layer",
+  clutchInterface: "Viewable in clutch/input interface",
+  synchroDetails: "Viewable in synchronizer close-up",
+};
 const gearComponentMap = {
   N: ["selectorRod", "shiftRod", "inputShaft", "countershaft", "outputShaft"],
   R: ["gearR", "reverseIdler", "fork56", "hub5R", "blockingRing"],
@@ -65,6 +73,29 @@ const primaryComponentByGear = {
   4: "gear4",
   5: "gear5",
   6: "gear6",
+};
+const focusGroups = {
+  inputShaft: ["inputShaft", "clutchInterface"],
+  outputShaft: ["outputShaft"],
+  countershaft: ["countershaft"],
+  reverseIdler: ["reverseIdler", "gearR"],
+  fork56: ["fork56", "hub5R", "gear5", "gearR"],
+  fork34: ["fork34", "hub34", "gear3", "gear4"],
+  fork12: ["fork12", "hub12", "gear1", "gear2"],
+  fork6: ["fork6", "hub6", "gear6"],
+  hub5R: ["hub5R", "fork56", "gear5", "gearR"],
+  hub34: ["hub34", "fork34", "gear3", "gear4"],
+  hub12: ["hub12", "fork12", "gear1", "gear2"],
+  hub6: ["hub6", "fork6", "gear6"],
+  gearR: ["gearR", "reverseIdler", "hub5R", "fork56"],
+  gear1: ["gear1", "hub12", "fork12"],
+  gear2: ["gear2", "hub12", "fork12"],
+  gear3: ["gear3", "hub34", "fork34"],
+  gear4: ["gear4", "hub34", "fork34"],
+  gear5: ["gear5", "hub5R", "fork56"],
+  gear6: ["gear6", "hub6", "fork6"],
+  case: ["case", "bellhousing", "caseRibs"],
+  bellhousing: ["bellhousing", "case", "clutchInterface"],
 };
 
 const viewLabels = { shifter: "Shifter", linkage: "Linkage", cutaway: "Transmission", clutch: "Clutch" };
@@ -138,6 +169,8 @@ const state = {
   cutaway: true,
   caseMode: "cutaway",
   flow: true,
+  focusSelected: false,
+  hoveredComponent: null,
   selectedComponent: null,
   orbit: { ...cameraPresets.shifter },
   targetOrbit: { ...cameraPresets.shifter },
@@ -148,6 +181,7 @@ const state = {
 const canvas = document.getElementById("scene");
 const gl = canvas.getContext("webgl", { antialias: true });
 const labels = document.getElementById("labelLayer");
+const tooltip = document.getElementById("inspectionTooltip");
 if (!gl) {
   document.querySelector(".canvas-card").innerHTML = "<p class='webgl-error'>WebGL is not available in this browser.</p>";
 }
@@ -551,24 +585,24 @@ function drawTransmission() {
   const internalAlpha = state.caseMode === "case" ? 0.16 : 1;
   const labelInternals = state.caseMode !== "case";
   if (state.caseMode === "cutaway") {
-    mesh(cube, model([0,-0.88,0.08], [3.0,0.08,1.08]), "#182331", 0.72);
-    mesh(cube, model([0,-0.08,1.1], [3.0,0.72,0.06]), "#182331", 0.46);
-    mesh(cube, model([0,-0.08,-0.98], [3.0,0.72,0.04]), "#182331", 0.28);
-    mesh(cube, model([-2.72,-0.1,0.06], [0.18,0.72,1.0]), "#263546", 0.42);
-    mesh(cube, model([2.88,-0.1,0.06], [0.18,0.68,0.9]), "#263546", 0.42);
+    mesh(cube, model([0,-0.88,0.08], [3.0,0.08,1.08]), "#182331", focusAlpha("case", 0.72));
+    mesh(cube, model([0,-0.08,1.1], [3.0,0.72,0.06]), "#182331", focusAlpha("case", 0.46));
+    mesh(cube, model([0,-0.08,-0.98], [3.0,0.72,0.04]), "#182331", focusAlpha("case", 0.28));
+    mesh(cube, model([-2.72,-0.1,0.06], [0.18,0.72,1.0]), "#263546", focusAlpha("bellhousing", 0.42));
+    mesh(cube, model([2.88,-0.1,0.06], [0.18,0.68,0.9]), "#263546", focusAlpha("case", 0.42));
   } else if (state.caseMode === "exposed") {
-    mesh(cube, model([0,-0.9,0.08], [2.92,0.04,0.95]), "#101822", 0.34);
-    mesh(cube, model([-2.72,-0.1,0.06], [0.12,0.54,0.78]), "#263546", 0.28);
-    mesh(cube, model([2.86,-0.1,0.06], [0.12,0.5,0.72]), "#263546", 0.28);
+    mesh(cube, model([0,-0.9,0.08], [2.92,0.04,0.95]), "#101822", focusAlpha("case", 0.34));
+    mesh(cube, model([-2.72,-0.1,0.06], [0.12,0.54,0.78]), "#263546", focusAlpha("bellhousing", 0.28));
+    mesh(cube, model([2.86,-0.1,0.06], [0.12,0.5,0.72]), "#263546", focusAlpha("case", 0.28));
   } else {
-    mesh(cube, model([0,-0.1,0.04], [3.02,0.92,1.08]), "#1d2b3a", 0.9);
-    mesh(cube, model([0,0.66,-0.1], [2.52,0.18,0.78]), "#314252", 0.92);
-    mesh(cube, model([-2.75,0.0,0.04], [0.36,0.74,0.96]), "#3b4a57", 0.92);
-    mesh(cube, model([2.9,-0.04,0.04], [0.28,0.66,0.84]), "#3b4a57", 0.92);
-    mesh(cyl, model([-3.12,0.34,-0.08], [0.18,0.22,0.18], [0,0,Math.PI/2]), "#81909d", 0.95);
-    mesh(cyl, model([3.16,0.34,-0.08], [0.14,0.28,0.14], [0,0,Math.PI/2]), "#81909d", 0.95);
+    mesh(cube, model([0,-0.1,0.04], [3.02,0.92,1.08]), "#1d2b3a", focusAlpha("case", 0.9));
+    mesh(cube, model([0,0.66,-0.1], [2.52,0.18,0.78]), "#314252", focusAlpha("case", 0.92));
+    mesh(cube, model([-2.75,0.0,0.04], [0.36,0.74,0.96]), "#3b4a57", focusAlpha("bellhousing", 0.92));
+    mesh(cube, model([2.9,-0.04,0.04], [0.28,0.66,0.84]), "#3b4a57", focusAlpha("case", 0.92));
+    mesh(cyl, model([-3.12,0.34,-0.08], [0.18,0.22,0.18], [0,0,Math.PI/2]), "#81909d", focusAlpha("inputShaft", 0.95));
+    mesh(cyl, model([3.16,0.34,-0.08], [0.14,0.28,0.14], [0,0,Math.PI/2]), "#81909d", focusAlpha("outputShaft", 0.95));
   }
-  [[-2.82,0.62,-0.74],[-2.82,-0.68,-0.74],[2.98,0.54,-0.74],[2.98,-0.62,-0.74]].forEach((p) => mesh(cyl, model(p, [0.055,0.045,0.055]), "#9aa8b5"));
+  [[-2.82,0.62,-0.74],[-2.82,-0.68,-0.74],[2.98,0.54,-0.74],[2.98,-0.62,-0.74]].forEach((p) => mesh(cyl, model(p, [0.055,0.045,0.055]), "#9aa8b5", focusAlpha("caseRibs", 1)));
 
   drawShaft("inputShaft", [-2.95,0.34,-0.08], [-2.12,0.34,-0.08], "#d7e1e9", internalAlpha);
   drawShaft("outputShaft", [-2.12,0.34,-0.08], [2.95,0.34,-0.08], "#b8c5cf", internalAlpha);
@@ -593,10 +627,10 @@ function drawTransmission() {
   drawHubSleeve("hub12", "1/2 Sleeve", 1.24, activeGear === "gear1" || activeGear === "gear2", activeForkId === "fork12" ? sleeveShift : 0, internalAlpha);
   drawHubSleeve("hub6", "6th Sleeve", 2.1, activeGear === "gear6", activeForkId === "fork6" ? sleeveShift : 0, internalAlpha);
 
-  mesh(cyl, model([0.2,1.05,-0.62], [0.045,2.45,0.045], [0,0,Math.PI/2]), "#526778", internalAlpha);
-  mesh(cyl, model([0.2,1.11,-0.42], [0.045,2.45,0.045], [0,0,Math.PI/2]), "#526778", internalAlpha);
-  mesh(cyl, model([0.2,1.05,-0.22], [0.045,2.45,0.045], [0,0,Math.PI/2]), "#526778", internalAlpha);
-  mesh(cyl, model([0.2,1.11,-0.02], [0.045,2.45,0.045], [0,0,Math.PI/2]), "#526778", internalAlpha);
+  mesh(cyl, model([0.2,1.05,-0.62], [0.045,2.45,0.045], [0,0,Math.PI/2]), "#526778", focusAlpha("detentSystem", internalAlpha));
+  mesh(cyl, model([0.2,1.11,-0.42], [0.045,2.45,0.045], [0,0,Math.PI/2]), "#526778", focusAlpha("detentSystem", internalAlpha));
+  mesh(cyl, model([0.2,1.05,-0.22], [0.045,2.45,0.045], [0,0,Math.PI/2]), "#526778", focusAlpha("detentSystem", internalAlpha));
+  mesh(cyl, model([0.2,1.11,-0.02], [0.045,2.45,0.045], [0,0,Math.PI/2]), "#526778", focusAlpha("detentSystem", internalAlpha));
   drawFork("fork56", -1.55, activeForkId === "fork56", sleeveShift, internalAlpha);
   drawFork("fork34", -0.05, activeForkId === "fork34", sleeveShift, internalAlpha);
   drawFork("fork12", 1.24, activeForkId === "fork12", sleeveShift, internalAlpha);
@@ -643,6 +677,21 @@ function addInspectionMarker(pos, symbol, text) {
   addLabel(pos, `${symbol} ${text}`, "inspect");
 }
 
+function getFocusSet() {
+  if (!state.focusSelected || state.view !== "cutaway" || !state.selectedComponent) return null;
+  return new Set(focusGroups[state.selectedComponent] || [state.selectedComponent]);
+}
+
+function isFocusedComponent(id) {
+  const focusSet = getFocusSet();
+  return !focusSet || focusSet.has(id);
+}
+
+function focusAlpha(id, alpha = 1, dimAlpha = 0.16) {
+  if (isFocusedComponent(id)) return alpha;
+  return Math.min(alpha, dimAlpha);
+}
+
 function projectToScreen(pos) {
   const clip = multiplyVec(viewProj, [pos[0], pos[1], pos[2], 1]);
   if (clip[3] <= 0) return null;
@@ -662,6 +711,7 @@ function addHotspot(pos, componentId, text, className = "") {
   el.dataset.hotspotComponent = componentId;
   el.textContent = text;
   el.title = componentCatalog[componentId].name;
+  el.setAttribute("aria-label", `Inspect ${componentCatalog[componentId].name}`);
   el.style.left = `${point.x}px`;
   el.style.top = `${point.y}px`;
   labels.appendChild(el);
@@ -670,18 +720,21 @@ function addHotspot(pos, componentId, text, className = "") {
 function drawShaft(id, from, to, color, alpha = 1) {
   const mid = [(from[0] + to[0]) / 2, (from[1] + to[1]) / 2, (from[2] + to[2]) / 2];
   const length = Math.abs(to[0] - from[0]) / 2;
-  mesh(cyl, model(mid, [0.07,length,0.07], [0,0,Math.PI/2]), color, alpha);
+  const selected = state.selectedComponent === id;
+  mesh(cyl, model(mid, [0.07,length,0.07], [0,0,Math.PI/2]), selected ? "#ffd166" : color, focusAlpha(id, alpha), selected ? "#5a4200" : "#000000");
+  if (selected && state.focusSelected) line([from, to], "#ffd166", 7, 0.78);
 }
 
 function drawGearPair(p, active, index, alpha = 1) {
   const selected = state.selectedComponent === p.id;
   const focus = active || selected;
   const glow = active ? "#0b5a35" : selected ? "#5a4200" : "#000000";
-  drawGear(p.x, 0.34, -0.08, p.r, focus, index, selected, alpha);
-  drawGear(p.x, -0.48, 0.55, p.cr, focus, index + 4, selected, alpha);
-  line([[p.x,0.34,-0.08],[p.x,-0.48,0.55]], active ? "#41ff91" : selected ? "#ffd166" : "#253d4c", focus ? 4 : 2, focus ? 0.9 : 0.45);
-  if (focus && alpha > 0.3) addLabel([p.x,0.98,-0.08], p.label, active ? "green" : "blue");
-  mesh(torus, model([p.x,0.34,-0.08], [p.r * 1.04,p.r * 1.04,p.r * 1.04], [Math.PI/2,0,0]), active ? "#b8ffd8" : selected ? "#ffe29a" : "#9faeba", Math.min(alpha, focus ? 0.9 : 0.55), glow);
+  const localAlpha = focusAlpha(p.id, alpha);
+  drawGear(p.x, 0.34, -0.08, p.r, focus, index, selected, localAlpha);
+  drawGear(p.x, -0.48, 0.55, p.cr, focus, index + 4, selected, localAlpha);
+  line([[p.x,0.34,-0.08],[p.x,-0.48,0.55]], active ? "#41ff91" : selected ? "#ffd166" : "#253d4c", focus ? 4 : 2, focus ? 0.9 : Math.min(localAlpha, 0.45));
+  if (focus && localAlpha > 0.3) addLabel([p.x,0.98,-0.08], p.label, active ? "green" : "blue");
+  mesh(torus, model([p.x,0.34,-0.08], [p.r * 1.04,p.r * 1.04,p.r * 1.04], [Math.PI/2,0,0]), active ? "#b8ffd8" : selected ? "#ffe29a" : "#9faeba", Math.min(localAlpha, focus ? 0.9 : 0.55), glow);
 }
 
 function drawGear(x, y, z, radius, active, index, selected = false, alpha = 1) {
@@ -702,11 +755,12 @@ function drawGear(x, y, z, radius, active, index, selected = false, alpha = 1) {
 
 function drawReverseIdler(active, alpha = 1) {
   const selected = state.selectedComponent === "reverseIdler";
-  drawGear(-1.1, 0.92, -0.58, 0.28, active || selected, 9, selected, alpha);
+  const localAlpha = focusAlpha("reverseIdler", alpha);
+  drawGear(-1.1, 0.92, -0.58, 0.28, active || selected, 9, selected, localAlpha);
   if (active || selected) {
     const color = active ? "#41ff91" : "#ffd166";
-    line([[-1.22,0.34,-0.08],[-1.1,0.92,-0.58]], color, 4, 0.86);
-    line([[-1.1,0.92,-0.58],[-1.22,-0.48,0.55]], color, 4, 0.86);
+    line([[-1.22,0.34,-0.08],[-1.1,0.92,-0.58]], color, 4, Math.min(localAlpha, 0.86));
+    line([[-1.1,0.92,-0.58],[-1.22,-0.48,0.55]], color, 4, Math.min(localAlpha, 0.86));
   }
 }
 
@@ -716,10 +770,11 @@ function drawHubSleeve(id, label, x, active, offset, alpha = 1) {
   const color = active ? "#48bfff" : selected ? "#ffd166" : "#9aaec0";
   const glow = active ? "#0b3554" : selected ? "#5a4200" : "#000000";
   const px = x + offset;
-  mesh(torus, model([px,0.34,-0.08], [0.31,0.31,0.31], [Math.PI/2,0,0]), color, Math.min(alpha, focus ? 1 : 0.76), glow);
-  mesh(cyl, model([px,0.34,-0.08], [0.22,0.14,0.22], [0,0,Math.PI/2]), active ? "#bcecff" : selected ? "#ffe29a" : "#7f93a5", Math.min(alpha, focus ? 0.92 : 0.7), glow);
-  mesh(torus, model([px,0.34,-0.08], [0.39,0.39,0.39], [Math.PI/2,0,0]), active || selected ? "#ffd166" : "#677887", Math.min(alpha, focus ? 0.86 : 0.48), active || selected ? "#6f4b00" : "#000000");
-  if (focus && alpha > 0.3) addLabel([px,0.72,-0.08], label, active ? "blue" : "green");
+  const localAlpha = focusAlpha(id, alpha);
+  mesh(torus, model([px,0.34,-0.08], [0.31,0.31,0.31], [Math.PI/2,0,0]), color, Math.min(localAlpha, focus ? 1 : 0.76), glow);
+  mesh(cyl, model([px,0.34,-0.08], [0.22,0.14,0.22], [0,0,Math.PI/2]), active ? "#bcecff" : selected ? "#ffe29a" : "#7f93a5", Math.min(localAlpha, focus ? 0.92 : 0.7), glow);
+  mesh(torus, model([px,0.34,-0.08], [0.39,0.39,0.39], [Math.PI/2,0,0]), active || selected ? "#ffd166" : "#677887", Math.min(localAlpha, focus ? 0.86 : 0.48), active || selected ? "#6f4b00" : "#000000");
+  if (focus && localAlpha > 0.3) addLabel([px,0.72,-0.08], label, active ? "blue" : "green");
 }
 
 function drawFork(id, x, active, shift, alpha = 1) {
@@ -727,10 +782,11 @@ function drawFork(id, x, active, shift, alpha = 1) {
   const focus = active || selected;
   const color = active ? "#ffc85a" : selected ? "#ffd166" : "#6d7e8d";
   const px = active ? x + shift : x;
-  mesh(cube, model([px,1.02,-0.42], [0.14,0.18,0.08]), color, Math.min(alpha, focus ? 0.95 : 0.62), focus ? "#4c3500" : "#000000");
-  mesh(cube, model([px,0.76,-0.25], [0.09,0.36,0.06], [0.1,0,0.12]), color, Math.min(alpha, focus ? 0.95 : 0.6));
-  mesh(cube, model([px,0.76,0.08], [0.09,0.36,0.06], [-0.1,0,-0.12]), color, Math.min(alpha, focus ? 0.95 : 0.6));
-  if (focus) line([[px,0.66,-0.18],[px,0.44,-0.08]], color, 5, 0.85);
+  const localAlpha = focusAlpha(id, alpha);
+  mesh(cube, model([px,1.02,-0.42], [0.14,0.18,0.08]), color, Math.min(localAlpha, focus ? 0.95 : 0.62), focus ? "#4c3500" : "#000000");
+  mesh(cube, model([px,0.76,-0.25], [0.09,0.36,0.06], [0.1,0,0.12]), color, Math.min(localAlpha, focus ? 0.95 : 0.6));
+  mesh(cube, model([px,0.76,0.08], [0.09,0.36,0.06], [-0.1,0,-0.12]), color, Math.min(localAlpha, focus ? 0.95 : 0.6));
+  if (focus) line([[px,0.66,-0.18],[px,0.44,-0.08]], color, 5, Math.min(localAlpha, 0.85));
 }
 
 function drawClutch() {
@@ -808,7 +864,12 @@ function renderUi() {
       <strong>${component.name}</strong>
     </button>`;
   }).join("");
-  document.getElementById("componentDetail").textContent = selectedComponent ? selectedComponent.role : "";
+  document.getElementById("inspectionCard").innerHTML = selectedComponent ? `
+    <span>${selectedComponent.assembly}</span>
+    <strong>${selectedComponent.name}</strong>
+    <em>${getInspectionStatus(state.selectedComponent)}</em>
+  ` : "";
+  document.getElementById("componentDetail").textContent = selectedComponent ? `${selectedComponent.role}${getDeferredNote(state.selectedComponent)}` : "";
   document.getElementById("sanityGrid").innerHTML = sanityChecklist.map((item) => `
     <span>${item.label}</span>
     <strong title="${item.detail}">${item.status}</strong>
@@ -834,11 +895,55 @@ function renderUi() {
   document.getElementById("flowBtn").classList.toggle("active", state.flow);
   document.getElementById("clutchBtn").classList.toggle("active", state.clutch);
   document.getElementById("clutchBtn").classList.toggle("warn", state.clutch);
+  document.getElementById("focusBtn").classList.toggle("active", state.focusSelected);
   document.querySelectorAll("[data-view]").forEach((b) => b.classList.toggle("active", b.dataset.view === state.view));
   document.querySelectorAll("[data-gear]").forEach((b) => b.classList.toggle("selected", b.dataset.gear === state.gear));
   document.querySelectorAll("[data-card-gear]").forEach((b) => b.classList.toggle("active", b.dataset.cardGear === state.gear));
   document.querySelectorAll("[data-step]").forEach((b) => b.classList.toggle("current", Number(b.dataset.step) === state.step));
   document.getElementById("playBtn").textContent = state.playing ? "Pause" : "Play";
+}
+
+function getDeferredNote(id) {
+  return deeperInspectionLabels[id] ? ` ${deeperInspectionLabels[id]}.` : "";
+}
+
+function getInspectionStatus(id) {
+  if (modeledNowIds.includes(id)) return state.focusSelected ? "Modeled now - focus isolate active" : "Modeled now - click Focus to isolate";
+  if (simplifiedNowIds.includes(id)) return "Simplified now - marked for detailed close-up";
+  if (deeperInspectionLabels[id]) return deeperInspectionLabels[id];
+  return "Mapped teaching target";
+}
+
+function setSelectedComponent(id) {
+  if (!componentCatalog[id]) return;
+  state.selectedComponent = id;
+  renderUi();
+}
+
+function showTooltip(id, clientX, clientY) {
+  const component = componentCatalog[id];
+  if (!component || !tooltip) return;
+  tooltip.hidden = false;
+  tooltip.innerHTML = `
+    <span>${component.assembly}</span>
+    <strong>${component.name}</strong>
+    <em>${getInspectionStatus(id)}</em>
+  `;
+  moveTooltip(clientX, clientY);
+}
+
+function moveTooltip(clientX, clientY) {
+  if (!tooltip || tooltip.hidden) return;
+  const card = tooltip.parentElement.getBoundingClientRect();
+  const x = Math.min(card.width - 18, Math.max(18, clientX - card.left + 14));
+  const y = Math.min(card.height - 18, Math.max(18, clientY - card.top + 14));
+  tooltip.style.left = `${x}px`;
+  tooltip.style.top = `${y}px`;
+}
+
+function hideTooltip() {
+  if (!tooltip) return;
+  tooltip.hidden = true;
 }
 
 function getActiveComponentIds() {
@@ -876,6 +981,7 @@ function getShiftRodStatus(g) {
 
 function setView(view) {
   state.view = view;
+  if (view !== "cutaway") state.focusSelected = false;
   state.targetOrbit = { ...cameraPresets[view] };
   renderUi();
 }
@@ -964,15 +1070,24 @@ labels.addEventListener("pointerdown", (e) => {
   if (!hotspotComponent) return;
   e.preventDefault();
   e.stopPropagation();
-  state.selectedComponent = hotspotComponent;
-  renderUi();
+  setSelectedComponent(hotspotComponent);
+});
+labels.addEventListener("pointerover", (e) => {
+  const hotspotComponent = e.target.closest("[data-hotspot-component]")?.dataset.hotspotComponent;
+  if (hotspotComponent) showTooltip(hotspotComponent, e.clientX, e.clientY);
+});
+labels.addEventListener("pointermove", (e) => {
+  if (e.target.closest("[data-hotspot-component]")) moveTooltip(e.clientX, e.clientY);
+});
+labels.addEventListener("pointerout", (e) => {
+  if (e.target.closest("[data-hotspot-component]") && !labels.contains(e.relatedTarget)) hideTooltip();
 });
 document.addEventListener("click", (e) => {
   const view = e.target.closest("[data-view]")?.dataset.view; if (view) setView(view);
   const gear = e.target.closest("[data-gear]")?.dataset.gear; if (gear) selectGear(gear);
   const cardGear = e.target.closest("[data-card-gear]")?.dataset.cardGear; if (cardGear) selectGear(cardGear);
-  const hotspotComponent = e.target.closest("[data-hotspot-component]")?.dataset.hotspotComponent; if (hotspotComponent) { state.selectedComponent = hotspotComponent; renderUi(); }
-  const component = e.target.closest("[data-component]")?.dataset.component; if (component) { state.selectedComponent = component; renderUi(); }
+  const hotspotComponent = e.target.closest("[data-hotspot-component]")?.dataset.hotspotComponent; if (hotspotComponent) setSelectedComponent(hotspotComponent);
+  const component = e.target.closest("[data-component]")?.dataset.component; if (component) setSelectedComponent(component);
   const step = e.target.closest("[data-step]")?.dataset.step; if (step) { state.step = Number(step); renderUi(); }
 });
 document.getElementById("labelsBtn").onclick = () => { state.labels = !state.labels; renderUi(); };
@@ -984,9 +1099,17 @@ document.getElementById("cutawayBtn").onclick = () => {
 };
 document.getElementById("flowBtn").onclick = () => { state.flow = !state.flow; renderUi(); };
 document.getElementById("clutchBtn").onclick = () => { state.clutch = !state.clutch; renderUi(); };
+document.getElementById("focusBtn").onclick = () => {
+  state.focusSelected = !state.focusSelected;
+  if (state.focusSelected && state.view !== "cutaway") {
+    state.view = "cutaway";
+    state.targetOrbit = { ...cameraPresets.cutaway };
+  }
+  renderUi();
+};
 document.getElementById("prevStep").onclick = () => { state.step = Math.max(0, state.step - 1); renderUi(); };
 document.getElementById("nextStep").onclick = () => { state.step = (state.step + 1) % timeline.length; renderUi(); };
-document.getElementById("resetBtn").onclick = () => { Object.assign(state, { gear: "N", previousGear: "N", step: 0, playing: false, clutch: false, selectedComponent: primaryComponentByGear.N, shifterTarget: { ...gearConfigs.N.shifter }, targetOrbit: { ...cameraPresets[state.view] } }); renderUi(); };
+document.getElementById("resetBtn").onclick = () => { Object.assign(state, { gear: "N", previousGear: "N", step: 0, playing: false, clutch: false, focusSelected: false, selectedComponent: primaryComponentByGear.N, shifterTarget: { ...gearConfigs.N.shifter }, targetOrbit: { ...cameraPresets[state.view] } }); renderUi(); };
 document.getElementById("playBtn").onclick = () => { state.playing = !state.playing; renderUi(); };
 setInterval(() => { if (state.playing) { state.step = (state.step + 1) % timeline.length; state.clutch = state.step < 2; renderUi(); } }, 1300);
 
