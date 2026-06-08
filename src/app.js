@@ -41,6 +41,12 @@ const componentCatalog = {
   oilPassages: { name: "Oil Passages / Lubrication", assembly: "Deferred Inspection", role: "Lubrication paths are not drawn yet; future cutaway layers should show oil feed, splash, and bearing lubrication context." },
   clutchInterface: { name: "Clutch / Input Interface", assembly: "Deferred Inspection", role: "The spline, pilot support, release hardware, and clutch coupling are represented as a simplified input shaft connection for now." },
   synchroDetails: { name: "Synchro Keys and Dog Teeth", assembly: "Deferred Inspection", role: "Fine teeth, keys, springs, and friction cones are grouped under hub/sleeve targets until a granular synchronizer view is added." },
+  synchroHubCore: { name: "Synchronizer Hub Core", assembly: "Synchronizer Close-Up", role: "Splined hub fixed to the shaft. The sliding sleeve rides over it and locks the selected gear after speed matching." },
+  synchroSleeve: { name: "Sliding Synchronizer Sleeve", assembly: "Synchronizer Close-Up", role: "Moves left or right under fork control to lock the chosen gear to the shaft through the dog teeth." },
+  synchroBlockerRing: { name: "Blocker / Baulk Ring", assembly: "Synchronizer Close-Up", role: "Friction ring that matches gear speed before the sleeve can complete engagement." },
+  synchroDogTeeth: { name: "Dog Teeth", assembly: "Synchronizer Close-Up", role: "Small engagement teeth that the sleeve locks onto after the blocker ring synchronizes speed." },
+  synchroKeysSprings: { name: "Keys and Springs", assembly: "Synchronizer Close-Up", role: "Small struts and spring pressure that center the sleeve and help the blocker ring do its speed-matching work." },
+  synchroForkPads: { name: "Shift Fork Pads", assembly: "Synchronizer Close-Up", role: "Contact pads where the shift fork pushes the sleeve without directly grinding against the gear teeth." },
 };
 
 const baseComponentIds = ["case", "bellhousing", "inputShaft", "countershaft", "outputShaft", "selectorRod", "shiftRod"];
@@ -63,8 +69,8 @@ const inspectionRoutes = {
   synchro: {
     title: "Synchronizer Close-Up",
     status: "Sleeve, hub, blocker ring, dog teeth",
-    summary: "Routes the selected hub/sleeve area into the future synchronizer module where keys, springs, blocker rings, dog teeth, and sleeve travel can be inspected.",
-    next: "Stage 3B can add the first simplified synchro exploded geometry.",
+    summary: "Shows a first exploded synchronizer teaching module with the hub core, sliding sleeve, blocker rings, dog teeth, keys/springs, and fork contact pads.",
+    next: "Stage 3C can tie this close-up more tightly to individual gear pairs and sleeve travel timing.",
   },
   bearing: {
     title: "Bearing View",
@@ -101,6 +107,12 @@ const inspectionRouteOrder = ["overview", "synchro", "bearing", "shiftRail", "ca
 const componentInspectionRoute = {
   blockingRing: "synchro",
   synchroDetails: "synchro",
+  synchroHubCore: "synchro",
+  synchroSleeve: "synchro",
+  synchroBlockerRing: "synchro",
+  synchroDogTeeth: "synchro",
+  synchroKeysSprings: "synchro",
+  synchroForkPads: "synchro",
   hub12: "synchro",
   hub34: "synchro",
   hub5R: "synchro",
@@ -161,8 +173,14 @@ const focusGroups = {
   gear6: ["gear6", "hub6", "fork6"],
   case: ["case", "bellhousing", "caseRibs"],
   bellhousing: ["bellhousing", "case", "clutchInterface"],
-  blockingRing: ["blockingRing", "hub12", "hub34", "hub5R", "hub6", "gear1", "gear2", "gear3", "gear4", "gear5", "gear6"],
-  synchroDetails: ["hub12", "hub34", "hub5R", "hub6", "blockingRing"],
+  blockingRing: ["blockingRing", "hub12", "hub34", "hub5R", "hub6", "gear1", "gear2", "gear3", "gear4", "gear5", "gear6", "synchroBlockerRing"],
+  synchroDetails: ["hub12", "hub34", "hub5R", "hub6", "blockingRing", "synchroHubCore", "synchroSleeve", "synchroBlockerRing", "synchroDogTeeth", "synchroKeysSprings", "synchroForkPads"],
+  synchroHubCore: ["synchroHubCore", "synchroSleeve", "synchroKeysSprings"],
+  synchroSleeve: ["synchroSleeve", "synchroHubCore", "synchroForkPads", "synchroDogTeeth"],
+  synchroBlockerRing: ["synchroBlockerRing", "synchroDogTeeth", "synchroSleeve"],
+  synchroDogTeeth: ["synchroDogTeeth", "synchroSleeve", "synchroBlockerRing"],
+  synchroKeysSprings: ["synchroKeysSprings", "synchroHubCore", "synchroSleeve"],
+  synchroForkPads: ["synchroForkPads", "synchroSleeve", "fork12", "fork34", "fork56", "fork6"],
   bearingSets: ["inputShaft", "outputShaft", "countershaft", "reverseIdler"],
   detentSystem: ["selectorRod", "shiftRod", "fork12", "fork34", "fork56", "fork6"],
   caseRibs: ["case", "bellhousing", "caseRibs"],
@@ -228,7 +246,8 @@ const sanityChecklist = [
   { label: "Phase C readiness", status: "Ready", detail: "Teachable component groups now have stable IDs for future hover/click targets." },
 ];
 const modeledNowIds = ["case", "bellhousing", "inputShaft", "outputShaft", "countershaft", "reverseIdler", "selectorRod", "shiftRod", "fork12", "fork34", "fork56", "fork6", "hub12", "hub34", "hub5R", "hub6", "gearR", "gear1", "gear2", "gear3", "gear4", "gear5", "gear6"];
-const simplifiedNowIds = ["blockingRing", "synchroDetails", "clutchInterface"];
+const synchroCloseupIds = ["synchroHubCore", "synchroSleeve", "synchroBlockerRing", "synchroDogTeeth", "synchroKeysSprings", "synchroForkPads"];
+const simplifiedNowIds = ["blockingRing", "synchroDetails", "clutchInterface", ...synchroCloseupIds];
 
 const state = {
   view: "shifter",
@@ -739,6 +758,7 @@ function drawTransmission() {
     addHotspot([0.18,1.56,-0.72], "detentSystem", "?", "inspect");
     addHotspot([0.95,-0.78,0.92], "oilPassages", "?", "inspect");
     addHotspot([0.28,0.94,0.28], "synchroDetails", "?", "inspect");
+    if (state.inspectionMode === "synchro") drawSynchronizerCloseup(activeSleeveX + sleeveShift, activeForkX + sleeveShift);
   } else {
     addLabel([0,1.08,-0.58], "Assembled MT82 Case");
     addInspectionMarker([-2.25,0.95,-0.7], "?", "Case ribs / seals");
@@ -749,6 +769,67 @@ function drawTransmission() {
   }
 }
 
+function drawSynchronizerCloseup(sourceX, forkX) {
+  const ox = 1.1;
+  const oy = 1.2;
+  const oz = -1.55;
+  const travel = Math.max(-0.18, Math.min(0.18, (gearConfigs[state.gear].trans.collar || 0) * 0.16));
+  const shaftAlpha = focusAlpha("outputShaft", 0.92, 0.28);
+  line([[sourceX,0.72,-0.08],[ox - 0.72,oy + 0.02,oz]], "#ffd166", 2, 0.62);
+  line([[forkX,1.04,-0.42],[ox + travel,oy + 0.52,oz]], "#ffc85a", 2, 0.62);
+
+  mesh(cyl, model([ox,oy,oz], [0.045,0.88,0.045], [0,0,Math.PI/2]), "#d7e1e9", shaftAlpha);
+  mesh(cyl, model([ox,oy,oz], [0.18,0.22,0.18], [0,0,Math.PI/2]), selectedColor("synchroHubCore", "#7f93a5"), focusAlpha("synchroHubCore", 0.96), selectedGlow("synchroHubCore"));
+  mesh(torus, model([ox,oy,oz], [0.28,0.28,0.28], [Math.PI/2,0,0]), selectedColor("synchroHubCore", "#9aaec0"), focusAlpha("synchroHubCore", 0.86), selectedGlow("synchroHubCore"));
+
+  mesh(cyl, model([ox + travel,oy,oz], [0.34,0.16,0.34], [0,0,Math.PI/2]), selectedColor("synchroSleeve", "#48bfff"), focusAlpha("synchroSleeve", 0.82), selectedGlow("synchroSleeve"));
+  mesh(torus, model([ox + travel,oy,oz], [0.4,0.4,0.4], [Math.PI/2,0,0]), selectedColor("synchroSleeve", "#bcecff"), focusAlpha("synchroSleeve", 0.88), selectedGlow("synchroSleeve"));
+
+  [-0.46, 0.46].forEach((side) => {
+    const ringId = "synchroBlockerRing";
+    mesh(torus, model([ox + side,oy,oz], [0.3,0.3,0.3], [Math.PI/2,0,0]), selectedColor(ringId, "#d0a14f"), focusAlpha(ringId, 0.9), selectedGlow(ringId));
+    mesh(cyl, model([ox + side,oy,oz], [0.23,0.035,0.23], [0,0,Math.PI/2]), selectedColor(ringId, "#ad7f33"), focusAlpha(ringId, 0.72), selectedGlow(ringId));
+    drawSynchroDogTeeth(ox + side * 1.18, oy, oz, side);
+  });
+
+  for (let i = 0; i < 3; i++) {
+    const a = i / 3 * Math.PI * 2 + 0.42;
+    const y = oy + Math.sin(a) * 0.22;
+    const z = oz + Math.cos(a) * 0.22;
+    mesh(cube, model([ox, y, z], [0.33,0.018,0.038], [0,0,0.08]), selectedColor("synchroKeysSprings", "#ffd166"), focusAlpha("synchroKeysSprings", 0.9), selectedGlow("synchroKeysSprings"));
+  }
+
+  mesh(cube, model([ox + travel,oy + 0.53,oz], [0.3,0.08,0.08]), selectedColor("synchroForkPads", "#ffc85a"), focusAlpha("synchroForkPads", 0.92), selectedGlow("synchroForkPads"));
+  mesh(cube, model([ox + travel,oy - 0.53,oz], [0.3,0.08,0.08]), selectedColor("synchroForkPads", "#ffc85a"), focusAlpha("synchroForkPads", 0.92), selectedGlow("synchroForkPads"));
+
+  addHotspot([ox,oy + 0.16,oz], "synchroHubCore", "H");
+  addHotspot([ox + travel,oy + 0.36,oz], "synchroSleeve", "SL");
+  addHotspot([ox - 0.46,oy + 0.18,oz], "synchroBlockerRing", "BR", "inspect");
+  addHotspot([ox + 0.66,oy + 0.16,oz], "synchroDogTeeth", "DT", "inspect");
+  addHotspot([ox,oy - 0.3,oz], "synchroKeysSprings", "K");
+  addHotspot([ox + travel,oy + 0.57,oz], "synchroForkPads", "FP");
+}
+
+function drawSynchroDogTeeth(x, y, z, side) {
+  const color = selectedColor("synchroDogTeeth", "#d9e4eb");
+  const glow = selectedGlow("synchroDogTeeth");
+  const alpha = focusAlpha("synchroDogTeeth", 0.92);
+  for (let t = 0; t < 14; t++) {
+    const a = t / 14 * Math.PI * 2;
+    const ty = y + Math.sin(a) * 0.31;
+    const tz = z + Math.cos(a) * 0.31;
+    mesh(cube, model([x,ty,tz], [0.045,0.028,0.055], [0.36 * side,0,a]), color, alpha, glow);
+  }
+}
+
+function selectedColor(id, normalColor) {
+  return state.selectedComponent === id ? "#ffd166" : normalColor;
+}
+
+function selectedGlow(id) {
+  return state.selectedComponent === id ? "#5a4200" : "#000000";
+}
+
 function addInspectionMarker(pos, symbol, text) {
   if (!state.labels) return;
   addLabel(pos, `${symbol} ${text}`, "inspect");
@@ -756,7 +837,9 @@ function addInspectionMarker(pos, symbol, text) {
 
 function getFocusSet() {
   if (!state.focusSelected || state.view !== "cutaway" || !state.selectedComponent) return null;
-  return new Set(focusGroups[state.selectedComponent] || [state.selectedComponent]);
+  const selected = focusGroups[state.selectedComponent] || [state.selectedComponent];
+  const route = state.inspectionMode === "synchro" ? synchroCloseupIds : [];
+  return new Set([...selected, ...route]);
 }
 
 function isFocusedComponent(id) {
@@ -1068,7 +1151,8 @@ function getActiveComponentIds() {
       : state.view === "clutch"
         ? ["bellhousing", "inputShaft"]
         : baseComponentIds;
-  return [...new Set([...viewIds, ...gearIds])];
+  const routeIds = state.inspectionMode === "synchro" ? synchroCloseupIds : [];
+  return [...new Set([...viewIds, ...gearIds, ...routeIds])];
 }
 
 function getGateStatus(g) {
