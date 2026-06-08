@@ -53,6 +53,71 @@ const deeperInspectionLabels = {
   clutchInterface: "Viewable in clutch/input interface",
   synchroDetails: "Viewable in synchronizer close-up",
 };
+const inspectionRoutes = {
+  overview: {
+    title: "Overview",
+    status: "Full transmission context",
+    summary: "Normal cutaway/exposed/case views stay active while the selected gear and component map drive the teaching flow.",
+    next: "Use Focus or a deferred marker when you want a tighter inspection path.",
+  },
+  synchro: {
+    title: "Synchronizer Close-Up",
+    status: "Sleeve, hub, blocker ring, dog teeth",
+    summary: "Routes the selected hub/sleeve area into the future synchronizer module where keys, springs, blocker rings, dog teeth, and sleeve travel can be inspected.",
+    next: "Stage 3B can add the first simplified synchro exploded geometry.",
+  },
+  bearing: {
+    title: "Bearing View",
+    status: "Shaft support and load path",
+    summary: "Routes shaft endpoints and bearing supports into a future bearing inspection state for radial load, axial control, and case support context.",
+    next: "Stage 3B/3C can add bearing pockets and support highlights.",
+  },
+  shiftRail: {
+    title: "Shift-Rail / Detent View",
+    status: "Rails, detents, interlock logic",
+    summary: "Routes the upper rail hardware into a future close-up showing how the detent and interlock system prevents two gears from being selected at once.",
+    next: "Add rail notches, detent balls/springs, and interlock callouts after the routing is stable.",
+  },
+  caseShell: {
+    title: "Case Shell Layer",
+    status: "Ribs, bolt bosses, seals, openings",
+    summary: "Routes the temporary case scaffold toward the future MT82-realistic shell with ribs, bolt bosses, sealing surfaces, and bearing pockets.",
+    next: "This is where the squared scaffold gets replaced by a realistic case silhouette.",
+  },
+  lubrication: {
+    title: "Lubrication View",
+    status: "Oil paths and splash zones",
+    summary: "Routes the oil-passage marker into a future lubrication layer showing splash/feed behavior around gears, synchronizers, bearings, and lower case oil level.",
+    next: "Add oil level and animated splash/feed paths once the case shape is more realistic.",
+  },
+  clutchInput: {
+    title: "Clutch / Input Interface",
+    status: "Spline, pilot support, release path",
+    summary: "Routes the front input connection into a future interface view for clutch disc spline engagement, pilot support, release hardware, and input shaft handoff.",
+    next: "Tie this deeper view to the existing clutch module and front bellhousing geometry.",
+  },
+};
+const inspectionRouteOrder = ["overview", "synchro", "bearing", "shiftRail", "caseShell", "lubrication", "clutchInput"];
+const componentInspectionRoute = {
+  blockingRing: "synchro",
+  synchroDetails: "synchro",
+  hub12: "synchro",
+  hub34: "synchro",
+  hub5R: "synchro",
+  hub6: "synchro",
+  bearingSets: "bearing",
+  inputShaft: "bearing",
+  outputShaft: "bearing",
+  countershaft: "bearing",
+  detentSystem: "shiftRail",
+  selectorRod: "shiftRail",
+  shiftRod: "shiftRail",
+  caseRibs: "caseShell",
+  case: "caseShell",
+  bellhousing: "caseShell",
+  oilPassages: "lubrication",
+  clutchInterface: "clutchInput",
+};
 const gearComponentMap = {
   N: ["selectorRod", "shiftRod", "inputShaft", "countershaft", "outputShaft"],
   R: ["gearR", "reverseIdler", "fork56", "hub5R", "blockingRing"],
@@ -96,6 +161,13 @@ const focusGroups = {
   gear6: ["gear6", "hub6", "fork6"],
   case: ["case", "bellhousing", "caseRibs"],
   bellhousing: ["bellhousing", "case", "clutchInterface"],
+  blockingRing: ["blockingRing", "hub12", "hub34", "hub5R", "hub6", "gear1", "gear2", "gear3", "gear4", "gear5", "gear6"],
+  synchroDetails: ["hub12", "hub34", "hub5R", "hub6", "blockingRing"],
+  bearingSets: ["inputShaft", "outputShaft", "countershaft", "reverseIdler"],
+  detentSystem: ["selectorRod", "shiftRod", "fork12", "fork34", "fork56", "fork6"],
+  caseRibs: ["case", "bellhousing", "caseRibs"],
+  oilPassages: ["case", "countershaft", "gear1", "gear2", "gear3", "gear4", "gear5", "gear6", "gearR", "bearingSets"],
+  clutchInterface: ["bellhousing", "inputShaft", "clutchInterface"],
 };
 
 const viewLabels = { shifter: "Shifter", linkage: "Linkage", cutaway: "Transmission", clutch: "Clutch" };
@@ -171,6 +243,7 @@ const state = {
   flow: true,
   focusSelected: false,
   hoveredComponent: null,
+  inspectionMode: "overview",
   selectedComponent: null,
   orbit: { ...cameraPresets.shifter },
   targetOrbit: { ...cameraPresets.shifter },
@@ -642,6 +715,10 @@ function drawTransmission() {
     flowLine([[0.8,0.78,-0.08],[2.8,0.78,-0.08]], "#41ff91", 6);
   }
   if (labelInternals) {
+    if (state.inspectionMode !== "overview") {
+      const route = inspectionRoutes[state.inspectionMode];
+      addLabel([0.12,1.72,-0.7], route.title, "route");
+    }
     addLabel([-2.28,0.68,-0.08], "Input Shaft");
     addLabel([2.35,0.68,-0.08], "Output / Mainshaft");
     addLabel([1.95,-0.92,0.55], "Countershaft");
@@ -841,11 +918,12 @@ function renderUi() {
   const activeComponents = getActiveComponentIds();
   if (!state.selectedComponent || !componentCatalog[state.selectedComponent]) state.selectedComponent = activeComponents[0];
   const selectedComponent = componentCatalog[state.selectedComponent];
+  const route = inspectionRoutes[state.inspectionMode] || inspectionRoutes.overview;
   document.getElementById("viewName").textContent = `${viewLabels[state.view]} View`;
   document.getElementById("selectedGear").textContent = `Selected: ${state.gear === "N" ? "Neutral" : `${state.gear} gear`}`;
   document.getElementById("sectionTitle").textContent = meta.title;
   document.getElementById("sectionSubtitle").textContent = meta.subtitle;
-  document.getElementById("canvasBadge").textContent = meta.badge;
+  document.getElementById("canvasBadge").textContent = state.inspectionMode === "overview" ? meta.badge : route.title;
   document.getElementById("currentStep").textContent = timeline[state.step];
   document.getElementById("gearTitle").textContent = gearConfig.cardTitle;
   document.getElementById("gearExplanation").textContent = gearConfig.explanation;
@@ -856,6 +934,7 @@ function renderUi() {
   document.getElementById("shiftRodStatus").textContent = getShiftRodStatus(gearConfig);
   document.getElementById("collarStatus").textContent = gearConfig.trans.active === null ? "Open" : `${gearConfig.cardTitle} locked`;
   document.getElementById("displayStatus").textContent = caseModeLabels[state.caseMode];
+  document.getElementById("inspectionStatus").textContent = route.title;
   document.getElementById("powerStatus").textContent = state.clutch ? "Interrupted" : state.gear === "N" ? "No gear selected" : "Flowing";
   document.getElementById("componentList").innerHTML = activeComponents.map((id) => {
     const component = componentCatalog[id];
@@ -870,6 +949,15 @@ function renderUi() {
     <em>${getInspectionStatus(state.selectedComponent)}</em>
   ` : "";
   document.getElementById("componentDetail").textContent = selectedComponent ? `${selectedComponent.role}${getDeferredNote(state.selectedComponent)}` : "";
+  document.getElementById("inspectionRoutes").innerHTML = inspectionRouteOrder.map((id) => {
+    const item = inspectionRoutes[id];
+    return `<button data-inspection-route="${id}" class="${id === state.inspectionMode ? "active" : ""}">
+      <span>${item.title}</span>
+      <strong>${item.status}</strong>
+    </button>`;
+  }).join("");
+  document.getElementById("inspectionSummary").textContent = route.summary;
+  document.getElementById("inspectionNext").textContent = route.next;
   document.getElementById("sanityGrid").innerHTML = sanityChecklist.map((item) => `
     <span>${item.label}</span>
     <strong title="${item.detail}">${item.status}</strong>
@@ -904,19 +992,44 @@ function renderUi() {
 }
 
 function getDeferredNote(id) {
-  return deeperInspectionLabels[id] ? ` ${deeperInspectionLabels[id]}.` : "";
+  const routeId = componentInspectionRoute[id];
+  if (deeperInspectionLabels[id]) return ` ${deeperInspectionLabels[id]}.`;
+  if (routeId && routeId !== "overview") return ` Route: ${inspectionRoutes[routeId].title}.`;
+  return "";
 }
 
 function getInspectionStatus(id) {
+  const routeId = componentInspectionRoute[id];
+  if (routeId && routeId !== "overview") return `${inspectionRoutes[routeId].title} - ${inspectionRoutes[routeId].status}`;
   if (modeledNowIds.includes(id)) return state.focusSelected ? "Modeled now - focus isolate active" : "Modeled now - click Focus to isolate";
   if (simplifiedNowIds.includes(id)) return "Simplified now - marked for detailed close-up";
   if (deeperInspectionLabels[id]) return deeperInspectionLabels[id];
   return "Mapped teaching target";
 }
 
-function setSelectedComponent(id) {
+function setInspectionMode(routeId) {
+  if (!inspectionRoutes[routeId]) return;
+  state.inspectionMode = routeId;
+  if (routeId === "overview") {
+    state.focusSelected = false;
+    renderUi();
+    return;
+  }
+  state.view = "cutaway";
+  state.caseMode = routeId === "caseShell" ? "case" : "cutaway";
+  state.cutaway = state.caseMode !== "case";
+  state.focusSelected = true;
+  state.targetOrbit = { ...cameraPresets.cutaway };
+  renderUi();
+}
+
+function setSelectedComponent(id, route = true) {
   if (!componentCatalog[id]) return;
   state.selectedComponent = id;
+  if (route && componentInspectionRoute[id]) {
+    setInspectionMode(componentInspectionRoute[id]);
+    return;
+  }
   renderUi();
 }
 
@@ -981,7 +1094,10 @@ function getShiftRodStatus(g) {
 
 function setView(view) {
   state.view = view;
-  if (view !== "cutaway") state.focusSelected = false;
+  if (view !== "cutaway") {
+    state.focusSelected = false;
+    state.inspectionMode = "overview";
+  }
   state.targetOrbit = { ...cameraPresets[view] };
   renderUi();
 }
@@ -1086,6 +1202,7 @@ document.addEventListener("click", (e) => {
   const view = e.target.closest("[data-view]")?.dataset.view; if (view) setView(view);
   const gear = e.target.closest("[data-gear]")?.dataset.gear; if (gear) selectGear(gear);
   const cardGear = e.target.closest("[data-card-gear]")?.dataset.cardGear; if (cardGear) selectGear(cardGear);
+  const inspectionRoute = e.target.closest("[data-inspection-route]")?.dataset.inspectionRoute; if (inspectionRoute) setInspectionMode(inspectionRoute);
   const hotspotComponent = e.target.closest("[data-hotspot-component]")?.dataset.hotspotComponent; if (hotspotComponent) setSelectedComponent(hotspotComponent);
   const component = e.target.closest("[data-component]")?.dataset.component; if (component) setSelectedComponent(component);
   const step = e.target.closest("[data-step]")?.dataset.step; if (step) { state.step = Number(step); renderUi(); }
@@ -1109,7 +1226,7 @@ document.getElementById("focusBtn").onclick = () => {
 };
 document.getElementById("prevStep").onclick = () => { state.step = Math.max(0, state.step - 1); renderUi(); };
 document.getElementById("nextStep").onclick = () => { state.step = (state.step + 1) % timeline.length; renderUi(); };
-document.getElementById("resetBtn").onclick = () => { Object.assign(state, { gear: "N", previousGear: "N", step: 0, playing: false, clutch: false, focusSelected: false, selectedComponent: primaryComponentByGear.N, shifterTarget: { ...gearConfigs.N.shifter }, targetOrbit: { ...cameraPresets[state.view] } }); renderUi(); };
+document.getElementById("resetBtn").onclick = () => { Object.assign(state, { gear: "N", previousGear: "N", step: 0, playing: false, clutch: false, focusSelected: false, inspectionMode: "overview", selectedComponent: primaryComponentByGear.N, shifterTarget: { ...gearConfigs.N.shifter }, targetOrbit: { ...cameraPresets[state.view] } }); renderUi(); };
 document.getElementById("playBtn").onclick = () => { state.playing = !state.playing; renderUi(); };
 setInterval(() => { if (state.playing) { state.step = (state.step + 1) % timeline.length; state.clutch = state.step < 2; renderUi(); } }, 1300);
 

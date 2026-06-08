@@ -603,6 +603,65 @@ p {
   line-height: 1.25;
 }
 
+.inspection-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.inspection-tabs button {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  min-height: 48px;
+  padding: 7px 8px;
+  border: 1px solid rgba(105, 208, 255, 0.2);
+  border-radius: 6px;
+  background: rgba(8, 15, 23, 0.82);
+  color: #e8f5ff;
+  cursor: pointer;
+  text-align: left;
+}
+
+.inspection-tabs button:hover {
+  border-color: rgba(105, 208, 255, 0.72);
+}
+
+.inspection-tabs button.active {
+  border-color: rgba(255, 209, 102, 0.78);
+  background: rgba(55, 38, 8, 0.84);
+}
+
+.inspection-tabs span {
+  overflow-wrap: anywhere;
+  color: #ffffff;
+  font-size: 0.73rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.inspection-tabs strong {
+  overflow-wrap: anywhere;
+  color: #72d3ff;
+  font-size: 0.64rem;
+  font-weight: 800;
+  line-height: 1.08;
+}
+
+.inspection-summary,
+.inspection-next {
+  margin-top: 8px;
+  color: #c8d7e5;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.inspection-next {
+  padding-left: 9px;
+  border-left: 2px solid rgba(255, 209, 102, 0.72);
+  color: #ffe29a;
+}
+
 .component-list button,
 .deferred-list button {
   display: grid;
@@ -740,6 +799,22 @@ p {
   background: rgba(42, 31, 6, 0.82);
   color: #ffe29a;
   font-weight: 900;
+}
+
+.scene-label.route,
+.scene-label.route-sub {
+  border-color: rgba(255, 209, 102, 0.78);
+  background: rgba(6, 13, 20, 0.9);
+  color: #ffe29a;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.scene-label.route-sub {
+  border-color: rgba(105, 208, 255, 0.48);
+  color: #d9f5ff;
+  font-size: 10px;
+  text-transform: none;
 }
 
 .scene-hotspot {
