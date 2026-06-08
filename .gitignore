@@ -2,6 +2,7 @@ node_modules/
 dist/
 .cache/
 .vite/
+.remember/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
