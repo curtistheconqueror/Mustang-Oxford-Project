@@ -104,6 +104,34 @@ const inspectionRoutes = {
   },
 };
 const inspectionRouteOrder = ["overview", "synchro", "bearing", "shiftRail", "caseShell", "lubrication", "clutchInput"];
+const depthStages = {
+  context: {
+    title: "Context",
+    status: "Transmission relationship",
+    summary: "Keeps the selected gear, sleeve, fork, and close-up module in one readable route view.",
+  },
+  closeup: {
+    title: "Close-Up",
+    status: "Focused module",
+    summary: "Moves closer to the inspection module and keeps only the primary teaching targets visible.",
+  },
+  internal: {
+    title: "Internal Detail",
+    status: "Fine parts",
+    summary: "Hides most surrounding context so small parts like dog teeth, blocker rings, keys, and fork pads can be inspected without label clutter.",
+  },
+};
+const depthStageOrder = ["context", "closeup", "internal"];
+const depthCameraPresets = {
+  context: { yaw: -0.72, pitch: 0.58, distance: 5.9, panX: 0.05, panY: 0.02 },
+  closeup: { yaw: -0.62, pitch: 0.62, distance: 4.45, panX: 0.35, panY: 0.26 },
+  internal: { yaw: -0.52, pitch: 0.5, distance: 4.05, panX: 0.58, panY: 0.18 },
+};
+const depthHotspotGroups = {
+  context: ["gear", "fork", "sleeve", "synchroSleeve", "synchroBlockerRing", "synchroDogTeeth"],
+  closeup: ["synchroHubCore", "synchroSleeve", "synchroBlockerRing", "synchroDogTeeth", "synchroKeysSprings", "synchroForkPads"],
+  internal: ["synchroBlockerRing", "synchroDogTeeth", "synchroKeysSprings", "synchroForkPads"],
+};
 const componentInspectionRoute = {
   blockingRing: "synchro",
   synchroDetails: "synchro",
@@ -263,6 +291,7 @@ const state = {
   focusSelected: false,
   hoveredComponent: null,
   inspectionMode: "overview",
+  inspectionDepth: "context",
   selectedComponent: null,
   orbit: { ...cameraPresets.shifter },
   targetOrbit: { ...cameraPresets.shifter },
@@ -736,9 +765,9 @@ function drawTransmission() {
   }
   if (labelInternals) {
     if (routeActive) {
-      if (activePair) addHotspot([activePair.x,1.08,-0.08], activePair.id, state.gear);
-      if (activeForkId) addHotspot([activeForkX + sleeveShift,1.18,-0.42], activeForkId, "F");
-      if (activeSleeve) addHotspot([activeSleeveX + sleeveShift,0.82,-0.08], activeSleeve, "S");
+      if (shouldShowDepthHotspot("gear") && activePair) addHotspot([activePair.x,1.08,-0.08], activePair.id, state.gear);
+      if (shouldShowDepthHotspot("fork") && activeForkId) addHotspot([activeForkX + sleeveShift,1.18,-0.42], activeForkId, "F");
+      if (shouldShowDepthHotspot("sleeve") && activeSleeve) addHotspot([activeSleeveX + sleeveShift,0.82,-0.08], activeSleeve, "S");
       if (state.inspectionMode === "synchro") drawSynchronizerCloseup(activeSleeveX + sleeveShift, activeForkX + sleeveShift);
       return;
     }
@@ -773,13 +802,16 @@ function drawTransmission() {
 }
 
 function drawSynchronizerCloseup(sourceX, forkX) {
-  const ox = 1.1;
-  const oy = 1.2;
-  const oz = -1.55;
+  const depthOffset = state.inspectionDepth === "internal" ? [0.36, -0.36, -0.18] : state.inspectionDepth === "closeup" ? [0.18, 0.06, -0.08] : [0, 0, 0];
+  const ox = 1.1 + depthOffset[0];
+  const oy = 1.2 + depthOffset[1];
+  const oz = -1.55 + depthOffset[2];
   const travel = Math.max(-0.18, Math.min(0.18, (gearConfigs[state.gear].trans.collar || 0) * 0.16));
-  const shaftAlpha = focusAlpha("outputShaft", 0.92, 0.28);
-  line([[sourceX,0.72,-0.08],[ox - 0.72,oy + 0.02,oz]], "#ffd166", 2, 0.62);
-  line([[forkX,1.04,-0.42],[ox + travel,oy + 0.52,oz]], "#ffc85a", 2, 0.62);
+  const shaftAlpha = focusAlpha("outputShaft", state.inspectionDepth === "internal" ? 0.28 : 0.92, 0.18);
+  if (state.inspectionDepth === "context") {
+    line([[sourceX,0.72,-0.08],[ox - 0.72,oy + 0.02,oz]], "#ffd166", 2, 0.62);
+    line([[forkX,1.04,-0.42],[ox + travel,oy + 0.52,oz]], "#ffc85a", 2, 0.62);
+  }
 
   mesh(cyl, model([ox,oy,oz], [0.045,0.88,0.045], [0,0,Math.PI/2]), "#d7e1e9", shaftAlpha);
   mesh(cyl, model([ox,oy,oz], [0.18,0.22,0.18], [0,0,Math.PI/2]), selectedColor("synchroHubCore", "#7f93a5"), focusAlpha("synchroHubCore", 0.96), selectedGlow("synchroHubCore"));
@@ -805,12 +837,17 @@ function drawSynchronizerCloseup(sourceX, forkX) {
   mesh(cube, model([ox + travel,oy + 0.53,oz], [0.3,0.08,0.08]), selectedColor("synchroForkPads", "#ffc85a"), focusAlpha("synchroForkPads", 0.92), selectedGlow("synchroForkPads"));
   mesh(cube, model([ox + travel,oy - 0.53,oz], [0.3,0.08,0.08]), selectedColor("synchroForkPads", "#ffc85a"), focusAlpha("synchroForkPads", 0.92), selectedGlow("synchroForkPads"));
 
-  addHotspot([ox,oy + 0.16,oz], "synchroHubCore", "H");
-  addHotspot([ox + travel,oy + 0.36,oz], "synchroSleeve", "SL");
-  addHotspot([ox - 0.46,oy + 0.18,oz], "synchroBlockerRing", "BR", "inspect");
-  addHotspot([ox + 0.66,oy + 0.16,oz], "synchroDogTeeth", "DT", "inspect");
-  addHotspot([ox,oy - 0.3,oz], "synchroKeysSprings", "K");
-  addHotspot([ox + travel,oy + 0.57,oz], "synchroForkPads", "FP");
+  if (shouldShowDepthHotspot("synchroHubCore")) addHotspot([ox,oy + 0.16,oz], "synchroHubCore", "H");
+  if (shouldShowDepthHotspot("synchroSleeve")) addHotspot([ox + travel,oy + 0.36,oz], "synchroSleeve", "SL");
+  if (shouldShowDepthHotspot("synchroBlockerRing")) addHotspot([ox - 0.46,oy + 0.18,oz], "synchroBlockerRing", "BR", "inspect");
+  if (shouldShowDepthHotspot("synchroDogTeeth")) addHotspot([ox + 0.66,oy + 0.16,oz], "synchroDogTeeth", "DT", "inspect");
+  if (shouldShowDepthHotspot("synchroKeysSprings")) addHotspot([ox,oy - 0.3,oz], "synchroKeysSprings", "K");
+  if (shouldShowDepthHotspot("synchroForkPads")) addHotspot([ox + travel,oy + 0.57,oz], "synchroForkPads", "FP");
+}
+
+function shouldShowDepthHotspot(id) {
+  if (state.inspectionMode !== "synchro") return true;
+  return (depthHotspotGroups[state.inspectionDepth] || depthHotspotGroups.context).includes(id);
 }
 
 function drawSynchroDogTeeth(x, y, z, side) {
@@ -1005,6 +1042,7 @@ function renderUi() {
   if (!state.selectedComponent || !componentCatalog[state.selectedComponent]) state.selectedComponent = activeComponents[0];
   const selectedComponent = componentCatalog[state.selectedComponent];
   const route = inspectionRoutes[state.inspectionMode] || inspectionRoutes.overview;
+  const depth = depthStages[state.inspectionDepth] || depthStages.context;
   document.getElementById("viewName").textContent = `${viewLabels[state.view]} View`;
   document.getElementById("selectedGear").textContent = `Selected: ${state.gear === "N" ? "Neutral" : `${state.gear} gear`}`;
   document.getElementById("sectionTitle").textContent = meta.title;
@@ -1021,6 +1059,7 @@ function renderUi() {
   document.getElementById("collarStatus").textContent = gearConfig.trans.active === null ? "Open" : `${gearConfig.cardTitle} locked`;
   document.getElementById("displayStatus").textContent = caseModeLabels[state.caseMode];
   document.getElementById("inspectionStatus").textContent = route.title;
+  document.getElementById("depthStatus").textContent = state.inspectionMode === "overview" ? "Context" : depth.title;
   document.getElementById("powerStatus").textContent = state.clutch ? "Interrupted" : state.gear === "N" ? "No gear selected" : "Flowing";
   document.getElementById("componentList").innerHTML = activeComponents.map((id) => {
     const component = componentCatalog[id];
@@ -1042,8 +1081,15 @@ function renderUi() {
       <strong>${item.status}</strong>
     </button>`;
   }).join("");
-  document.getElementById("inspectionSummary").textContent = route.summary;
-  document.getElementById("inspectionNext").textContent = route.next;
+  document.getElementById("depthStages").innerHTML = depthStageOrder.map((id) => {
+    const item = depthStages[id];
+    return `<button data-depth-stage="${id}" class="${id === state.inspectionDepth ? "active" : ""}" ${state.inspectionMode === "overview" ? "disabled" : ""}>
+      <span>${item.title}</span>
+      <strong>${item.status}</strong>
+    </button>`;
+  }).join("");
+  document.getElementById("inspectionSummary").textContent = state.inspectionMode === "overview" ? route.summary : `${route.summary} ${depth.summary}`;
+  document.getElementById("inspectionNext").textContent = state.inspectionMode === "overview" ? route.next : `${depth.title}: ${route.next}`;
   document.getElementById("sanityGrid").innerHTML = sanityChecklist.map((item) => `
     <span>${item.label}</span>
     <strong title="${item.detail}">${item.status}</strong>
@@ -1098,6 +1144,7 @@ function setInspectionMode(routeId) {
   state.inspectionMode = routeId;
   if (routeId === "overview") {
     state.focusSelected = false;
+    state.inspectionDepth = "context";
     renderUi();
     return;
   }
@@ -1105,7 +1152,21 @@ function setInspectionMode(routeId) {
   state.caseMode = routeId === "caseShell" ? "case" : "cutaway";
   state.cutaway = state.caseMode !== "case";
   state.focusSelected = true;
-  state.targetOrbit = { ...cameraPresets.cutaway };
+  state.inspectionDepth = state.inspectionDepth || "context";
+  state.targetOrbit = { ...(depthCameraPresets[state.inspectionDepth] || cameraPresets.cutaway) };
+  renderUi();
+}
+
+function setInspectionDepth(depthId) {
+  if (!depthStages[depthId]) return;
+  state.inspectionDepth = depthId;
+  if (state.inspectionMode !== "overview") {
+    state.view = "cutaway";
+    state.caseMode = "cutaway";
+    state.cutaway = true;
+    state.focusSelected = true;
+    state.targetOrbit = { ...(depthCameraPresets[depthId] || cameraPresets.cutaway) };
+  }
   renderUi();
 }
 
@@ -1184,6 +1245,7 @@ function setView(view) {
   if (view !== "cutaway") {
     state.focusSelected = false;
     state.inspectionMode = "overview";
+    state.inspectionDepth = "context";
   }
   state.targetOrbit = { ...cameraPresets[view] };
   renderUi();
@@ -1290,6 +1352,7 @@ document.addEventListener("click", (e) => {
   const gear = e.target.closest("[data-gear]")?.dataset.gear; if (gear) selectGear(gear);
   const cardGear = e.target.closest("[data-card-gear]")?.dataset.cardGear; if (cardGear) selectGear(cardGear);
   const inspectionRoute = e.target.closest("[data-inspection-route]")?.dataset.inspectionRoute; if (inspectionRoute) setInspectionMode(inspectionRoute);
+  const depthStage = e.target.closest("[data-depth-stage]")?.dataset.depthStage; if (depthStage) setInspectionDepth(depthStage);
   const hotspotComponent = e.target.closest("[data-hotspot-component]")?.dataset.hotspotComponent; if (hotspotComponent) setSelectedComponent(hotspotComponent);
   const component = e.target.closest("[data-component]")?.dataset.component; if (component) setSelectedComponent(component);
   const step = e.target.closest("[data-step]")?.dataset.step; if (step) { state.step = Number(step); renderUi(); }
@@ -1313,7 +1376,7 @@ document.getElementById("focusBtn").onclick = () => {
 };
 document.getElementById("prevStep").onclick = () => { state.step = Math.max(0, state.step - 1); renderUi(); };
 document.getElementById("nextStep").onclick = () => { state.step = (state.step + 1) % timeline.length; renderUi(); };
-document.getElementById("resetBtn").onclick = () => { Object.assign(state, { gear: "N", previousGear: "N", step: 0, playing: false, clutch: false, focusSelected: false, inspectionMode: "overview", selectedComponent: primaryComponentByGear.N, shifterTarget: { ...gearConfigs.N.shifter }, targetOrbit: { ...cameraPresets[state.view] } }); renderUi(); };
+document.getElementById("resetBtn").onclick = () => { Object.assign(state, { gear: "N", previousGear: "N", step: 0, playing: false, clutch: false, focusSelected: false, inspectionMode: "overview", inspectionDepth: "context", selectedComponent: primaryComponentByGear.N, shifterTarget: { ...gearConfigs.N.shifter }, targetOrbit: { ...cameraPresets[state.view] } }); renderUi(); };
 document.getElementById("playBtn").onclick = () => { state.playing = !state.playing; renderUi(); };
 setInterval(() => { if (state.playing) { state.step = (state.step + 1) % timeline.length; state.clutch = state.step < 2; renderUi(); } }, 1300);
 
