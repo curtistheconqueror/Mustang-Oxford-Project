@@ -23,3 +23,4 @@
 - The interface must stay clean: do not display every part title at every depth. Use route-specific labels, compact hotspots, right-panel descriptions, vantage-point changes, and future depth-stage toggles instead of overlapping text.
 - Deeper parts should be revealed through inspection depth stages or more internal vantage points, not by spreading labels across one crowded view.
 - Phase C Stage 3C establishes Context, Close-Up, and Internal Detail depth stages; future route modules should use those stages before adding more labels or hotspots.
+- Phase C Stage 3D syncs the synchronizer close-up to the shift timeline: blocker ring during speed match, fork/sleeve travel during engagement, dog teeth lock, and power flow after clutch release.

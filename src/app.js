@@ -296,7 +296,7 @@ const state = {
   orbit: { ...cameraPresets.shifter },
   targetOrbit: { ...cameraPresets.shifter },
   shifterTarget: { ...gearConfigs.N.shifter },
-  anim: { sx: 0, sz: 0, sy: 0, lx: 0, lz: 0, collar: 0, pedal: 0 },
+  anim: { sx: 0, sz: 0, sy: 0, lx: 0, lz: 0, collar: 0, pedal: 0, synchroTravel: 0, blocker: 0, dogLock: 0, powerPulse: 0 },
 };
 
 const canvas = document.getElementById("scene");
@@ -532,6 +532,7 @@ function draw(now) {
 function updateAnim(dt) {
   const g = gearConfigs[state.gear];
   const shifter = state.shifterTarget || g.shifter;
+  const synchro = getSynchroMotionTargets();
   state.anim.sx = damp(state.anim.sx, shifter.x, dt, 6.4);
   state.anim.sz = damp(state.anim.sz, shifter.z, dt, 6.4);
   state.anim.sy = damp(state.anim.sy, shifter.down, dt, 8);
@@ -539,9 +540,24 @@ function updateAnim(dt) {
   state.anim.lz = damp(state.anim.lz, g.linkage.z, dt);
   state.anim.collar = damp(state.anim.collar, -1.2 + g.trans.fork * 1.2 + g.trans.collar * 0.25, dt);
   state.anim.pedal = damp(state.anim.pedal, state.clutch ? -0.6 : -0.15, dt);
+  state.anim.synchroTravel = damp(state.anim.synchroTravel, synchro.sleeve, dt, 7);
+  state.anim.blocker = damp(state.anim.blocker, synchro.blocker, dt, 8);
+  state.anim.dogLock = damp(state.anim.dogLock, synchro.dog, dt, 8);
+  state.anim.powerPulse = damp(state.anim.powerPulse, synchro.power, dt, 6);
   Object.keys(state.orbit).forEach((key) => {
     state.orbit[key] = damp(state.orbit[key], state.targetOrbit[key], dt, 5);
   });
+}
+
+function getSynchroMotionTargets() {
+  const active = state.view === "cutaway" && state.inspectionMode === "synchro" && state.gear !== "N";
+  if (!active) return { sleeve: 0, blocker: 0, dog: 0, power: 0 };
+  return {
+    sleeve: state.step >= 5 ? 1 : state.step >= 4 ? 0.62 : state.step >= 3 ? 0.18 : 0,
+    blocker: state.step >= 3 && state.step <= 4 ? 1 : state.step === 5 ? 0.35 : 0,
+    dog: state.step >= 5 ? 1 : 0,
+    power: state.step >= 6 && !state.clutch ? 1 : 0,
+  };
 }
 
 function model(t = [0,0,0], s = [1,1,1], r = [0,0,0]) {
@@ -806,8 +822,14 @@ function drawSynchronizerCloseup(sourceX, forkX) {
   const ox = 1.1 + depthOffset[0];
   const oy = 1.2 + depthOffset[1];
   const oz = -1.55 + depthOffset[2];
-  const travel = Math.max(-0.18, Math.min(0.18, (gearConfigs[state.gear].trans.collar || 0) * 0.16));
+  const collarDirection = Math.sign(gearConfigs[state.gear].trans.collar || 0);
+  const activeSide = collarDirection || 1;
+  const travel = activeSide * 0.22 * state.anim.synchroTravel;
   const shaftAlpha = focusAlpha("outputShaft", state.inspectionDepth === "internal" ? 0.28 : 0.92, 0.18);
+  const sleeveActive = state.anim.synchroTravel > 0.08;
+  const sleeveColor = sleeveActive ? "#48bfff" : "#8ea1af";
+  const sleeveRim = state.anim.dogLock > 0.45 ? "#7dffc2" : "#bcecff";
+  const forkColor = state.anim.synchroTravel > 0.4 ? "#ffd166" : "#ffc85a";
   if (state.inspectionDepth === "context") {
     line([[sourceX,0.72,-0.08],[ox - 0.72,oy + 0.02,oz]], "#ffd166", 2, 0.62);
     line([[forkX,1.04,-0.42],[ox + travel,oy + 0.52,oz]], "#ffc85a", 2, 0.62);
@@ -817,14 +839,20 @@ function drawSynchronizerCloseup(sourceX, forkX) {
   mesh(cyl, model([ox,oy,oz], [0.18,0.22,0.18], [0,0,Math.PI/2]), selectedColor("synchroHubCore", "#7f93a5"), focusAlpha("synchroHubCore", 0.96), selectedGlow("synchroHubCore"));
   mesh(torus, model([ox,oy,oz], [0.28,0.28,0.28], [Math.PI/2,0,0]), selectedColor("synchroHubCore", "#9aaec0"), focusAlpha("synchroHubCore", 0.86), selectedGlow("synchroHubCore"));
 
-  mesh(cyl, model([ox + travel,oy,oz], [0.34,0.16,0.34], [0,0,Math.PI/2]), selectedColor("synchroSleeve", "#48bfff"), focusAlpha("synchroSleeve", 0.82), selectedGlow("synchroSleeve"));
-  mesh(torus, model([ox + travel,oy,oz], [0.4,0.4,0.4], [Math.PI/2,0,0]), selectedColor("synchroSleeve", "#bcecff"), focusAlpha("synchroSleeve", 0.88), selectedGlow("synchroSleeve"));
+  mesh(cyl, model([ox + travel,oy,oz], [0.34,0.16,0.34], [0,0,Math.PI/2]), selectedColor("synchroSleeve", sleeveColor), focusAlpha("synchroSleeve", 0.82), sleeveActive ? "#082a3c" : selectedGlow("synchroSleeve"));
+  mesh(torus, model([ox + travel,oy,oz], [0.4,0.4,0.4], [Math.PI/2,0,0]), selectedColor("synchroSleeve", sleeveRim), focusAlpha("synchroSleeve", 0.88), state.anim.dogLock > 0.45 ? "#06452e" : selectedGlow("synchroSleeve"));
 
   [-0.46, 0.46].forEach((side) => {
     const ringId = "synchroBlockerRing";
-    mesh(torus, model([ox + side,oy,oz], [0.3,0.3,0.3], [Math.PI/2,0,0]), selectedColor(ringId, "#d0a14f"), focusAlpha(ringId, 0.9), selectedGlow(ringId));
-    mesh(cyl, model([ox + side,oy,oz], [0.23,0.035,0.23], [0,0,Math.PI/2]), selectedColor(ringId, "#ad7f33"), focusAlpha(ringId, 0.72), selectedGlow(ringId));
-    drawSynchroDogTeeth(ox + side * 1.18, oy, oz, side);
+    const isActiveSide = side === activeSide * 0.46;
+    const blockerGlow = isActiveSide && state.anim.blocker > 0.12 ? "#5a3600" : selectedGlow(ringId);
+    const blockerColor = isActiveSide && state.anim.blocker > 0.12 ? "#ffd166" : "#d0a14f";
+    mesh(torus, model([ox + side,oy,oz], [0.3,0.3,0.3], [Math.PI/2,0,0]), selectedColor(ringId, blockerColor), focusAlpha(ringId, 0.9), blockerGlow);
+    mesh(cyl, model([ox + side,oy,oz], [0.23,0.035,0.23], [0,0,Math.PI/2]), selectedColor(ringId, "#ad7f33"), focusAlpha(ringId, 0.72), blockerGlow);
+    if (isActiveSide && state.anim.blocker > 0.12) {
+      mesh(torus, model([ox + side,oy,oz], [0.36,0.36,0.36], [Math.PI/2,0,0]), "#ffe29a", 0.38 + state.anim.blocker * 0.34, "#4c3100");
+    }
+    drawSynchroDogTeeth(ox + side * 1.18, oy, oz, side, isActiveSide && state.anim.dogLock > 0.18);
   });
 
   for (let i = 0; i < 3; i++) {
@@ -834,8 +862,11 @@ function drawSynchronizerCloseup(sourceX, forkX) {
     mesh(cube, model([ox, y, z], [0.33,0.018,0.038], [0,0,0.08]), selectedColor("synchroKeysSprings", "#ffd166"), focusAlpha("synchroKeysSprings", 0.9), selectedGlow("synchroKeysSprings"));
   }
 
-  mesh(cube, model([ox + travel,oy + 0.53,oz], [0.3,0.08,0.08]), selectedColor("synchroForkPads", "#ffc85a"), focusAlpha("synchroForkPads", 0.92), selectedGlow("synchroForkPads"));
-  mesh(cube, model([ox + travel,oy - 0.53,oz], [0.3,0.08,0.08]), selectedColor("synchroForkPads", "#ffc85a"), focusAlpha("synchroForkPads", 0.92), selectedGlow("synchroForkPads"));
+  mesh(cube, model([ox + travel,oy + 0.53,oz], [0.3,0.08,0.08]), selectedColor("synchroForkPads", forkColor), focusAlpha("synchroForkPads", 0.92), state.anim.synchroTravel > 0.35 ? "#553600" : selectedGlow("synchroForkPads"));
+  mesh(cube, model([ox + travel,oy - 0.53,oz], [0.3,0.08,0.08]), selectedColor("synchroForkPads", forkColor), focusAlpha("synchroForkPads", 0.92), state.anim.synchroTravel > 0.35 ? "#553600" : selectedGlow("synchroForkPads"));
+  if (state.flow && state.anim.powerPulse > 0.1) {
+    flowLine([[ox - 0.82,oy - 0.74,oz],[ox - 0.18,oy - 0.74,oz],[ox + travel,oy - 0.62,oz],[ox + 0.82,oy - 0.74,oz]], "#41ff91", 4, state.anim.powerPulse);
+  }
 
   if (shouldShowDepthHotspot("synchroHubCore")) addHotspot([ox,oy + 0.16,oz], "synchroHubCore", "H");
   if (shouldShowDepthHotspot("synchroSleeve")) addHotspot([ox + travel,oy + 0.36,oz], "synchroSleeve", "SL");
@@ -850,9 +881,9 @@ function shouldShowDepthHotspot(id) {
   return (depthHotspotGroups[state.inspectionDepth] || depthHotspotGroups.context).includes(id);
 }
 
-function drawSynchroDogTeeth(x, y, z, side) {
-  const color = selectedColor("synchroDogTeeth", "#d9e4eb");
-  const glow = selectedGlow("synchroDogTeeth");
+function drawSynchroDogTeeth(x, y, z, side, locked = false) {
+  const color = selectedColor("synchroDogTeeth", locked ? "#7dffc2" : "#d9e4eb");
+  const glow = locked ? "#06452e" : selectedGlow("synchroDogTeeth");
   const alpha = focusAlpha("synchroDogTeeth", 0.92);
   for (let t = 0; t < 14; t++) {
     const a = t / 14 * Math.PI * 2;
@@ -860,6 +891,17 @@ function drawSynchroDogTeeth(x, y, z, side) {
     const tz = z + Math.cos(a) * 0.31;
     mesh(cube, model([x,ty,tz], [0.045,0.028,0.055], [0.36 * side,0,a]), color, alpha, glow);
   }
+}
+
+function getSynchroActionText() {
+  if (state.inspectionMode !== "synchro") return "";
+  if (state.gear === "N") return "Select a gear to watch the synchronizer sleeve move from neutral into engagement.";
+  if (state.step <= 1) return "Clutch input is unloaded first, so the synchronizer can work without engine torque fighting it.";
+  if (state.step === 2) return "The shifter path chooses the gate and lines up the linkage for this gear.";
+  if (state.step === 3) return "Selector rods pre-load the fork and bring the blocker ring into the speed-match phase.";
+  if (state.step === 4) return "The fork pads push the sleeve toward the active gear while the blocker ring controls timing.";
+  if (state.step === 5) return "Dog teeth align and the sleeve locks the selected gear to the shaft.";
+  return state.clutch ? "Power is still interrupted until the clutch is released." : "Clutch released: green flow returns through the locked gear path.";
 }
 
 function selectedColor(id, normalColor) {
@@ -1088,8 +1130,9 @@ function renderUi() {
       <strong>${item.status}</strong>
     </button>`;
   }).join("");
+  const synchroAction = getSynchroActionText();
   document.getElementById("inspectionSummary").textContent = state.inspectionMode === "overview" ? route.summary : `${route.summary} ${depth.summary}`;
-  document.getElementById("inspectionNext").textContent = state.inspectionMode === "overview" ? route.next : `${depth.title}: ${route.next}`;
+  document.getElementById("inspectionNext").textContent = synchroAction || (state.inspectionMode === "overview" ? route.next : `${depth.title}: ${route.next}`);
   document.getElementById("sanityGrid").innerHTML = sanityChecklist.map((item) => `
     <span>${item.label}</span>
     <strong title="${item.detail}">${item.status}</strong>
