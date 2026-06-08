@@ -24,3 +24,4 @@
 - Deeper parts should be revealed through inspection depth stages or more internal vantage points, not by spreading labels across one crowded view.
 - Phase C Stage 3C establishes Context, Close-Up, and Internal Detail depth stages; future route modules should use those stages before adding more labels or hotspots.
 - Phase C Stage 3D syncs the synchronizer close-up to the shift timeline: blocker ring during speed match, fork/sleeve travel during engagement, dog teeth lock, and power flow after clutch release.
+- Phase C Stage 3E improves hotspot behavior: routed markers show clearer affordance, hover tooltips explain where to inspect next, and selected components can automatically move to their best route/depth.

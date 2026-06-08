@@ -603,6 +603,12 @@ p {
   line-height: 1.25;
 }
 
+.inspection-card small {
+  color: #c8d7e5;
+  font-size: 0.72rem;
+  line-height: 1.28;
+}
+
 .inspection-tabs {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -751,6 +757,16 @@ p {
   line-height: 1.15;
 }
 
+.component-list em,
+.deferred-list em {
+  overflow-wrap: anywhere;
+  color: #ffe29a;
+  font-size: 0.64rem;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
 .deferred-list {
   max-height: 150px;
   margin-top: 8px;
@@ -886,15 +902,18 @@ p {
   letter-spacing: 0;
   pointer-events: auto;
   transform: translate(-50%, -50%);
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
 }
 
 .scene-hotspot:hover,
-.scene-hotspot:focus-visible {
+.scene-hotspot:focus-visible,
+.scene-hotspot.hovered {
   border-color: rgba(255, 255, 255, 0.92);
   background: rgba(28, 91, 126, 0.94);
   box-shadow: 0 0 0 3px rgba(105, 208, 255, 0.22), 0 0 22px rgba(105, 208, 255, 0.48);
   color: #ffffff;
   outline: none;
+  transform: translate(-50%, -50%) scale(1.08);
 }
 
 .scene-hotspot.active {
@@ -908,6 +927,24 @@ p {
   border-color: rgba(255, 209, 102, 0.86);
   background: rgba(42, 31, 6, 0.9);
   color: #ffe29a;
+}
+
+.scene-hotspot.deferred {
+  border-style: dashed;
+  color: #ffe29a;
+}
+
+.scene-hotspot.routed::after {
+  content: "";
+  position: absolute;
+  right: -3px;
+  top: -3px;
+  width: 7px;
+  height: 7px;
+  border: 1px solid rgba(4, 11, 17, 0.92);
+  border-radius: 999px;
+  background: #ffd166;
+  box-shadow: 0 0 10px rgba(255, 209, 102, 0.5);
 }
 
 .inspection-tooltip {
@@ -949,6 +986,12 @@ p {
   font-size: 0.72rem;
   font-style: normal;
   line-height: 1.2;
+}
+
+.inspection-tooltip small {
+  color: #c8d7e5;
+  font-size: 0.7rem;
+  line-height: 1.25;
 }
 
 @media (max-width: 1220px) {

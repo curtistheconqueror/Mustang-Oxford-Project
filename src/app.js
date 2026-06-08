@@ -59,6 +59,34 @@ const deeperInspectionLabels = {
   clutchInterface: "Viewable in clutch/input interface",
   synchroDetails: "Viewable in synchronizer close-up",
 };
+const depthComponentHints = {
+  synchroHubCore: "Context shows the hub relationship. Close-Up shows the sleeve riding over it.",
+  synchroSleeve: "Use the timeline to watch this sleeve move from neutral to locked.",
+  synchroBlockerRing: "Best viewed in Close-Up or Internal Detail during steps 4-5.",
+  synchroDogTeeth: "Internal Detail keeps the dog teeth readable without crowding labels.",
+  synchroKeysSprings: "Internal Detail isolates these small centering parts.",
+  synchroForkPads: "Close-Up shows where the fork pushes the sleeve.",
+  bearingSets: "Future bearing close-up target. This marker routes to the bearing inspection path.",
+  detentSystem: "Future shift-rail target. This marker routes to detent/interlock inspection.",
+  caseRibs: "Future case-shell target. This marker routes toward realistic MT82 case geometry.",
+  oilPassages: "Future lubrication layer target. This marker routes to oil-flow inspection.",
+  clutchInterface: "Future clutch/input target. This marker routes to the front spline and release path.",
+  synchroDetails: "Routes into the synchronizer close-up and then deeper stages for fine parts.",
+};
+const componentDepthPreference = {
+  synchroHubCore: "closeup",
+  synchroSleeve: "closeup",
+  synchroBlockerRing: "internal",
+  synchroDogTeeth: "internal",
+  synchroKeysSprings: "internal",
+  synchroForkPads: "closeup",
+  synchroDetails: "closeup",
+  bearingSets: "context",
+  detentSystem: "context",
+  caseRibs: "context",
+  oilPassages: "context",
+  clutchInterface: "context",
+};
 const inspectionRoutes = {
   overview: {
     title: "Overview",
@@ -272,6 +300,7 @@ const sanityChecklist = [
   { label: "Display modes", status: "Pass", detail: "Case, Cutaway, and Exposed modes are available from the transmission display control." },
   { label: "Deferred parts", status: "Tracked", detail: "Bearings, detents, oil passages, seals, ribs, and fine synchronizer details are marked for deeper inspection." },
   { label: "Phase C readiness", status: "Ready", detail: "Teachable component groups now have stable IDs for future hover/click targets." },
+  { label: "Hotspot behavior", status: "Pass", detail: "Clickable markers route to the right inspection path, expose depth hints, and keep labels compact." },
 ];
 const modeledNowIds = ["case", "bellhousing", "inputShaft", "outputShaft", "countershaft", "reverseIdler", "selectorRod", "shiftRod", "fork12", "fork34", "fork56", "fork6", "hub12", "hub34", "hub5R", "hub6", "gearR", "gear1", "gear2", "gear3", "gear4", "gear5", "gear6"];
 const synchroCloseupIds = ["synchroHubCore", "synchroSleeve", "synchroBlockerRing", "synchroDogTeeth", "synchroKeysSprings", "synchroForkPads"];
@@ -948,11 +977,19 @@ function addHotspot(pos, componentId, text, className = "") {
   const point = projectToScreen(pos);
   if (!point) return;
   const el = document.createElement("button");
+  const stateClass = [
+    className,
+    componentId === state.selectedComponent ? "active" : "",
+    componentId === state.hoveredComponent ? "hovered" : "",
+    deeperInspectionLabels[componentId] ? "deferred" : "",
+    componentInspectionRoute[componentId] && componentInspectionRoute[componentId] !== "overview" ? "routed" : "",
+  ].filter(Boolean).join(" ");
   el.type = "button";
-  el.className = `scene-hotspot ${className} ${componentId === state.selectedComponent ? "active" : ""}`;
+  el.className = `scene-hotspot ${stateClass}`;
   el.dataset.hotspotComponent = componentId;
+  el.dataset.routeLabel = getComponentRouteLabel(componentId);
   el.textContent = text;
-  el.title = componentCatalog[componentId].name;
+  el.title = `${componentCatalog[componentId].name} - ${getDepthHint(componentId)}`;
   el.setAttribute("aria-label", `Inspect ${componentCatalog[componentId].name}`);
   el.style.left = `${point.x}px`;
   el.style.top = `${point.y}px`;
@@ -1108,14 +1145,16 @@ function renderUi() {
     return `<button data-component="${id}" class="${id === state.selectedComponent ? "active" : ""}">
       <span>${component.assembly}</span>
       <strong>${component.name}</strong>
+      <em>${getComponentRouteLabel(id)}</em>
     </button>`;
   }).join("");
   document.getElementById("inspectionCard").innerHTML = selectedComponent ? `
     <span>${selectedComponent.assembly}</span>
     <strong>${selectedComponent.name}</strong>
     <em>${getInspectionStatus(state.selectedComponent)}</em>
+    <small>${getDepthHint(state.selectedComponent)}</small>
   ` : "";
-  document.getElementById("componentDetail").textContent = selectedComponent ? `${selectedComponent.role}${getDeferredNote(state.selectedComponent)}` : "";
+  document.getElementById("componentDetail").textContent = selectedComponent ? `${selectedComponent.role} ${getSelectedGuidance(state.selectedComponent)}${getDeferredNote(state.selectedComponent)}` : "";
   document.getElementById("inspectionRoutes").innerHTML = inspectionRouteOrder.map((id) => {
     const item = inspectionRoutes[id];
     return `<button data-inspection-route="${id}" class="${id === state.inspectionMode ? "active" : ""}">
@@ -1142,6 +1181,7 @@ function renderUi() {
     return `<button data-component="${id}" class="${id === state.selectedComponent ? "active" : ""}">
       <span>${component.assembly}</span>
       <strong>${component.name}</strong>
+      <em>${getComponentRouteLabel(id)}</em>
     </button>`;
   }).join("");
   const help = {
@@ -1182,6 +1222,32 @@ function getInspectionStatus(id) {
   return "Mapped teaching target";
 }
 
+function getDepthHint(id) {
+  if (!componentCatalog[id]) return "";
+  const routeId = componentInspectionRoute[id];
+  const route = routeId ? inspectionRoutes[routeId] : null;
+  const preferredDepth = componentDepthPreference[id];
+  const depth = preferredDepth ? depthStages[preferredDepth] : null;
+  if (depthComponentHints[id]) return depthComponentHints[id];
+  if (route && depth && routeId !== "overview") return `Click routes to ${route.title}, ${depth.title}.`;
+  if (route && routeId !== "overview") return `Click routes to ${route.title}.`;
+  return "Click to pin this component in the inspection panel.";
+}
+
+function getComponentRouteLabel(id) {
+  const routeId = componentInspectionRoute[id];
+  const route = routeId ? inspectionRoutes[routeId] : null;
+  const preferredDepth = componentDepthPreference[id];
+  const depth = preferredDepth ? depthStages[preferredDepth] : null;
+  if (!route || routeId === "overview") return "Pin in map";
+  return depth ? `${route.title} / ${depth.title}` : route.title;
+}
+
+function getSelectedGuidance(id) {
+  if (!id || !componentCatalog[id]) return "";
+  return `${getInspectionStatus(id)}. ${getDepthHint(id)}`;
+}
+
 function setInspectionMode(routeId) {
   if (!inspectionRoutes[routeId]) return;
   state.inspectionMode = routeId;
@@ -1216,7 +1282,10 @@ function setInspectionDepth(depthId) {
 function setSelectedComponent(id, route = true) {
   if (!componentCatalog[id]) return;
   state.selectedComponent = id;
+  state.hoveredComponent = null;
   if (route && componentInspectionRoute[id]) {
+    const preferredDepth = componentDepthPreference[id];
+    if (preferredDepth && depthStages[preferredDepth]) state.inspectionDepth = preferredDepth;
     setInspectionMode(componentInspectionRoute[id]);
     return;
   }
@@ -1231,6 +1300,7 @@ function showTooltip(id, clientX, clientY) {
     <span>${component.assembly}</span>
     <strong>${component.name}</strong>
     <em>${getInspectionStatus(id)}</em>
+    <small>${getDepthHint(id)}</small>
   `;
   moveTooltip(clientX, clientY);
 }
@@ -1382,13 +1452,21 @@ labels.addEventListener("pointerdown", (e) => {
 });
 labels.addEventListener("pointerover", (e) => {
   const hotspotComponent = e.target.closest("[data-hotspot-component]")?.dataset.hotspotComponent;
-  if (hotspotComponent) showTooltip(hotspotComponent, e.clientX, e.clientY);
+  if (hotspotComponent) {
+    state.hoveredComponent = hotspotComponent;
+    showTooltip(hotspotComponent, e.clientX, e.clientY);
+  }
 });
 labels.addEventListener("pointermove", (e) => {
   if (e.target.closest("[data-hotspot-component]")) moveTooltip(e.clientX, e.clientY);
 });
 labels.addEventListener("pointerout", (e) => {
-  if (e.target.closest("[data-hotspot-component]") && !labels.contains(e.relatedTarget)) hideTooltip();
+  if (!e.target.closest("[data-hotspot-component]")) return;
+  const nextHotspot = e.relatedTarget?.closest?.("[data-hotspot-component]");
+  if (!nextHotspot) {
+    state.hoveredComponent = null;
+    hideTooltip();
+  }
 });
 document.addEventListener("click", (e) => {
   const view = e.target.closest("[data-view]")?.dataset.view; if (view) setView(view);
