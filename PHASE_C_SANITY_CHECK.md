@@ -20,3 +20,5 @@
 - The final project should feel like inspecting a real Getrag MT82 transmission on a bench.
 - The case, gearbox internals, linkage, clutch/input interface, shafts, forks, hubs, synchronizers, bearings, seals, and lubrication views should be spatially believable.
 - Any abstraction should be labeled as simplified, deferred, or viewable in a deeper inspection transition.
+- The interface must stay clean: do not display every part title at every depth. Use route-specific labels, compact hotspots, right-panel descriptions, vantage-point changes, and future depth-stage toggles instead of overlapping text.
+- Deeper parts should be revealed through inspection depth stages or more internal vantage points, not by spreading labels across one crowded view.

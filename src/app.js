@@ -676,6 +676,7 @@ function drawTransmission() {
   const activeSleeveX = { hub5R: -1.55, hub34: -0.05, hub12: 1.24, hub6: 2.1 }[activeSleeve] ?? 0;
   const internalAlpha = state.caseMode === "case" ? 0.16 : 1;
   const labelInternals = state.caseMode !== "case";
+  const routeActive = state.inspectionMode !== "overview";
   if (state.caseMode === "cutaway") {
     mesh(cube, model([0,-0.88,0.08], [3.0,0.08,1.08]), "#182331", focusAlpha("case", 0.72));
     mesh(cube, model([0,-0.08,1.1], [3.0,0.72,0.06]), "#182331", focusAlpha("case", 0.46));
@@ -734,9 +735,12 @@ function drawTransmission() {
     flowLine([[0.8,0.78,-0.08],[2.8,0.78,-0.08]], "#41ff91", 6);
   }
   if (labelInternals) {
-    if (state.inspectionMode !== "overview") {
-      const route = inspectionRoutes[state.inspectionMode];
-      addLabel([0.12,1.72,-0.7], route.title, "route");
+    if (routeActive) {
+      if (activePair) addHotspot([activePair.x,1.08,-0.08], activePair.id, state.gear);
+      if (activeForkId) addHotspot([activeForkX + sleeveShift,1.18,-0.42], activeForkId, "F");
+      if (activeSleeve) addHotspot([activeSleeveX + sleeveShift,0.82,-0.08], activeSleeve, "S");
+      if (state.inspectionMode === "synchro") drawSynchronizerCloseup(activeSleeveX + sleeveShift, activeForkX + sleeveShift);
+      return;
     }
     addLabel([-2.28,0.68,-0.08], "Input Shaft");
     addLabel([2.35,0.68,-0.08], "Output / Mainshaft");
@@ -758,7 +762,6 @@ function drawTransmission() {
     addHotspot([0.18,1.56,-0.72], "detentSystem", "?", "inspect");
     addHotspot([0.95,-0.78,0.92], "oilPassages", "?", "inspect");
     addHotspot([0.28,0.94,0.28], "synchroDetails", "?", "inspect");
-    if (state.inspectionMode === "synchro") drawSynchronizerCloseup(activeSleeveX + sleeveShift, activeForkX + sleeveShift);
   } else {
     addLabel([0,1.08,-0.58], "Assembled MT82 Case");
     addInspectionMarker([-2.25,0.95,-0.7], "?", "Case ribs / seals");
