@@ -12,6 +12,7 @@ const gearConfigs = {
 const componentCatalog = {
   case: { name: "Aluminum Transmission Case", assembly: "Housing", role: "Contains the shafts, bearings, shift rail hardware, and oil while supporting the external shifter linkage." },
   bellhousing: { name: "Bellhousing / Front Case", assembly: "Housing", role: "Bolts to the engine and surrounds the clutch-to-input-shaft interface." },
+  tailHousing: { name: "Rear / Tail Housing", assembly: "Housing", role: "Narrows around the output shaft and supports the rear bearing, seal, and driveshaft connection." },
   inputShaft: { name: "Input Shaft", assembly: "Shafts", role: "Receives torque from the clutch and feeds the gear train." },
   outputShaft: { name: "Output Shaft / Mainshaft", assembly: "Shafts", role: "Carries selected gear torque out of the transmission toward the driveshaft." },
   countershaft: { name: "Countershaft", assembly: "Shafts", role: "Carries the mating gear cluster that stays meshed with the mainshaft gears." },
@@ -49,7 +50,7 @@ const componentCatalog = {
   synchroForkPads: { name: "Shift Fork Pads", assembly: "Synchronizer Close-Up", role: "Contact pads where the shift fork pushes the sleeve without directly grinding against the gear teeth." },
 };
 
-const baseComponentIds = ["case", "bellhousing", "inputShaft", "countershaft", "outputShaft", "selectorRod", "shiftRod"];
+const baseComponentIds = ["case", "bellhousing", "tailHousing", "inputShaft", "countershaft", "outputShaft", "selectorRod", "shiftRod"];
 const deferredComponentIds = ["bearingSets", "detentSystem", "caseRibs", "oilPassages", "clutchInterface", "synchroDetails"];
 const deeperInspectionLabels = {
   bearingSets: "Viewable in bearing close-up",
@@ -115,8 +116,8 @@ const inspectionRoutes = {
   caseShell: {
     title: "Case Shell Layer",
     status: "Ribs, bolt bosses, seals, openings",
-    summary: "Routes the temporary case scaffold toward the future MT82-realistic shell with ribs, bolt bosses, sealing surfaces, and bearing pockets.",
-    next: "This is where the squared scaffold gets replaced by a realistic case silhouette.",
+    summary: "Separates the bellhousing, stepped main case, and rear extension while preserving the gear-train clearances and future removable-shell structure.",
+    next: "Stage 4B will refine the cut planes, bearing pockets, service openings, and individually removable shell layers.",
   },
   lubrication: {
     title: "Lubrication View",
@@ -151,7 +152,7 @@ const depthStages = {
 };
 const depthStageOrder = ["context", "closeup", "internal"];
 const depthCameraPresets = {
-  context: { yaw: -0.72, pitch: 0.58, distance: 5.9, panX: 0.05, panY: 0.02 },
+  context: { yaw: -0.72, pitch: 0.58, distance: 6.35, panX: 0.0, panY: 0.02 },
   closeup: { yaw: -0.62, pitch: 0.62, distance: 4.45, panX: 0.35, panY: 0.26 },
   internal: { yaw: -0.52, pitch: 0.5, distance: 4.05, panX: 0.58, panY: 0.18 },
 };
@@ -183,6 +184,7 @@ const componentInspectionRoute = {
   caseRibs: "caseShell",
   case: "caseShell",
   bellhousing: "caseShell",
+  tailHousing: "caseShell",
   oilPassages: "lubrication",
   clutchInterface: "clutchInput",
 };
@@ -229,6 +231,7 @@ const focusGroups = {
   gear6: ["gear6", "hub6", "fork6"],
   case: ["case", "bellhousing", "caseRibs"],
   bellhousing: ["bellhousing", "case", "clutchInterface"],
+  tailHousing: ["tailHousing", "case", "outputShaft", "bearingSets"],
   blockingRing: ["blockingRing", "hub12", "hub34", "hub5R", "hub6", "gear1", "gear2", "gear3", "gear4", "gear5", "gear6", "synchroBlockerRing"],
   synchroDetails: ["hub12", "hub34", "hub5R", "hub6", "blockingRing", "synchroHubCore", "synchroSleeve", "synchroBlockerRing", "synchroDogTeeth", "synchroKeysSprings", "synchroForkPads"],
   synchroHubCore: ["synchroHubCore", "synchroSleeve", "synchroKeysSprings"],
@@ -254,7 +257,7 @@ const viewMeta = {
 const cameraPresets = {
   shifter: { yaw: -0.55, pitch: 0.66, distance: 6.35, panX: 0.0, panY: 0.05 },
   linkage: { yaw: -0.9, pitch: 0.94, distance: 5.3, panX: 0.05, panY: 0.0 },
-  cutaway: { yaw: -0.72, pitch: 0.58, distance: 5.9, panX: 0.05, panY: 0.02 },
+  cutaway: { yaw: -0.72, pitch: 0.58, distance: 6.35, panX: 0.0, panY: 0.02 },
   clutch: { yaw: -0.42, pitch: 0.45, distance: 5.1, panX: -0.12, panY: 0.05 },
 };
 const orderedGears = ["R", "1", "2", "3", "4", "5", "6", "N"];
@@ -290,9 +293,9 @@ const timeline = [
 const caseModes = ["cutaway", "exposed", "case"];
 const caseModeLabels = { cutaway: "Cutaway", exposed: "Exposed", case: "Case" };
 const caseModeHelp = {
-  cutaway: "Cutaway mode keeps the lower case and side walls visible while opening the top so the gear train can be studied in context.",
-  exposed: "Exposed mode removes most of the housing and leaves the shafts, gears, forks, sleeves, and reverse idler visible for inspection.",
-  case: "Case mode shows the assembled transmission housing first; internal parts are intentionally muted until a cutaway or exposed view is selected.",
+  cutaway: "Cutaway mode keeps the bellhousing flange, stepped lower casting, far wall, selector spine, ribs, and rear support visible while opening the gear train.",
+  exposed: "Exposed mode reduces the housing to faint spatial references, casting ribs, and support rails so the shafts, gears, forks, sleeves, and reverse idler remain readable.",
+  case: "Case mode shows the assembled bellhousing, stepped main gearbox casting, selector-rail spine, and narrower rear extension; internal parts are intentionally muted.",
 };
 const sanityChecklist = [
   { label: "Gear map", status: "Pass", detail: "Each gear selects a primary gear plus its sleeve, fork, blocking ring, shafts, and power state." },
@@ -301,8 +304,9 @@ const sanityChecklist = [
   { label: "Deferred parts", status: "Tracked", detail: "Bearings, detents, oil passages, seals, ribs, and fine synchronizer details are marked for deeper inspection." },
   { label: "Phase C readiness", status: "Ready", detail: "Teachable component groups now have stable IDs for future hover/click targets." },
   { label: "Hotspot behavior", status: "Pass", detail: "Clickable markers route to the right inspection path, expose depth hints, and keep labels compact." },
+  { label: "Case foundation", status: "Pass", detail: "Bellhousing, main case, and rear housing now share one stepped MT82-style envelope without moving the established internal gear-train coordinates." },
 ];
-const modeledNowIds = ["case", "bellhousing", "inputShaft", "outputShaft", "countershaft", "reverseIdler", "selectorRod", "shiftRod", "fork12", "fork34", "fork56", "fork6", "hub12", "hub34", "hub5R", "hub6", "gearR", "gear1", "gear2", "gear3", "gear4", "gear5", "gear6"];
+const modeledNowIds = ["case", "bellhousing", "tailHousing", "inputShaft", "outputShaft", "countershaft", "reverseIdler", "selectorRod", "shiftRod", "fork12", "fork34", "fork56", "fork6", "hub12", "hub34", "hub5R", "hub6", "gearR", "gear1", "gear2", "gear3", "gear4", "gear5", "gear6"];
 const synchroCloseupIds = ["synchroHubCore", "synchroSleeve", "synchroBlockerRing", "synchroDogTeeth", "synchroKeysSprings", "synchroForkPads"];
 const simplifiedNowIds = ["blockingRing", "synchroDetails", "clutchInterface", ...synchroCloseupIds];
 
@@ -740,6 +744,69 @@ function drawLinkage() {
   addLabel([1.15 + rodPull,0.84,0.34], "Longitudinal Push/Pull", "green");
 }
 
+function drawCaseFoundation(mode) {
+  const assembled = mode === "case";
+  const cutaway = mode === "cutaway";
+  const shellAlpha = assembled ? 0.96 : cutaway ? 0.18 : 0.07;
+  const edgeAlpha = assembled ? 0.98 : cutaway ? 0.7 : 0.3;
+  const bellColor = selectedColor("bellhousing", "#667583");
+  const caseColor = selectedColor("case", "#536575");
+  const tailColor = selectedColor("tailHousing", "#61717e");
+  const bellGlow = selectedGlow("bellhousing");
+  const caseGlow = selectedGlow("case");
+  const tailGlow = selectedGlow("tailHousing");
+
+  // Bellhousing: broad clutch flange stepping down into the gearbox case.
+  mesh(cyl, model([-2.78,-0.06,0.02], [1.24,0.28,1.12], [0,0,Math.PI/2]), bellColor, focusAlpha("bellhousing", shellAlpha), bellGlow);
+  mesh(cyl, model([-2.38,-0.06,0.02], [0.98,0.3,0.92], [0,0,Math.PI/2]), bellColor, focusAlpha("bellhousing", shellAlpha), bellGlow);
+  mesh(torus, model([-3.04,-0.06,0.02], [1.28,1.16,1.28], [Math.PI/2,0,0]), "#a3afb8", focusAlpha("bellhousing", edgeAlpha), bellGlow);
+  mesh(torus, model([-2.16,-0.06,0.02], [0.91,0.86,0.91], [Math.PI/2,0,0]), "#82909b", focusAlpha("bellhousing", edgeAlpha * 0.8), bellGlow);
+
+  // Main gear case: stepped casting follows the gear cluster instead of a rectangular box.
+  [
+    [-1.68,-0.08,1.02,0.38],
+    [-0.92,-0.08,1.08,0.38],
+    [-0.14,-0.1,1.05,0.4],
+    [0.66,-0.12,1.0,0.4],
+    [1.44,-0.14,0.92,0.38],
+  ].forEach(([x,y,radius,halfLength]) => {
+    mesh(cyl, model([x,y,0.04], [radius,halfLength,radius * 0.92], [0,0,Math.PI/2]), caseColor, focusAlpha("case", shellAlpha), caseGlow);
+  });
+
+  // Rear extension and output support taper down toward the driveshaft.
+  mesh(cyl, model([2.15,-0.12,0.04], [0.78,0.38,0.72], [0,0,Math.PI/2]), tailColor, focusAlpha("tailHousing", shellAlpha), tailGlow);
+  mesh(cyl, model([2.72,-0.1,0.02], [0.59,0.3,0.54], [0,0,Math.PI/2]), tailColor, focusAlpha("tailHousing", shellAlpha), tailGlow);
+  mesh(torus, model([3.0,-0.1,0.02], [0.56,0.52,0.56], [Math.PI/2,0,0]), "#8c9aa5", focusAlpha("tailHousing", edgeAlpha), tailGlow);
+
+  // Raised selector-rail spine and lower sump/mounting rail.
+  mesh(cube, model([0.0,0.82,-0.24], [2.25,0.16,0.46]), caseColor, focusAlpha("case", assembled ? 0.96 : cutaway ? 0.58 : 0.2), caseGlow);
+  mesh(cube, model([0.22,1.02,-0.22], [1.58,0.1,0.32]), "#657785", focusAlpha("caseRibs", assembled ? 0.94 : cutaway ? 0.62 : 0.24));
+  mesh(cube, model([0.1,-0.92,0.18], [2.55,0.12,0.72]), "#455766", focusAlpha("case", assembled ? 0.96 : cutaway ? 0.82 : 0.3), caseGlow);
+  mesh(cube, model([1.86,-0.82,0.14], [0.72,0.12,0.58]), tailColor, focusAlpha("tailHousing", assembled ? 0.96 : cutaway ? 0.76 : 0.28), tailGlow);
+
+  // Casting ribs establish the final shell language and remain visible in every display mode.
+  [-2.08,-1.62,-1.12,-0.62,-0.12,0.4,0.92,1.44,1.88,2.34].forEach((x, index) => {
+    const radius = x < -2 ? 0.9 : x > 1.8 ? 0.66 : 0.98 - Math.max(0, x) * 0.08;
+    const id = x > 1.8 ? "tailHousing" : "caseRibs";
+    mesh(torus, model([x,-0.1,0.04], [radius,radius * 0.92,radius], [Math.PI/2,0,0]), index % 2 ? "#778792" : "#8a98a2", focusAlpha(id, edgeAlpha * (assembled ? 0.72 : 0.54)), selectedGlow(id));
+  });
+
+  // Bellhousing bolt bosses and rear flange bosses provide recognizable service points.
+  [[0.88,-0.78],[0.88,0.78],[0.18,-1.12],[0.18,1.12],[-0.7,-0.88],[-0.7,0.88]].forEach(([y,z]) => {
+    mesh(cyl, model([-3.05,y,z], [0.09,0.13,0.09], [0,0,Math.PI/2]), "#b5bec5", focusAlpha("bellhousing", edgeAlpha), bellGlow);
+  });
+  [[0.48,-0.55],[0.48,0.55],[-0.54,-0.48],[-0.54,0.48]].forEach(([y,z]) => {
+    mesh(cyl, model([3.0,y,z], [0.065,0.1,0.065], [0,0,Math.PI/2]), "#aeb8c0", focusAlpha("tailHousing", edgeAlpha), tailGlow);
+  });
+
+  if (cutaway) {
+    // Opaque lower and far-side remnants make the open-top cutaway read as a removed casting section.
+    mesh(cube, model([-0.08,-0.78,0.72], [2.58,0.16,0.18]), "#536575", focusAlpha("case", 0.74), caseGlow);
+    mesh(cube, model([-0.08,-0.22,0.98], [2.5,0.52,0.08]), "#617281", focusAlpha("case", 0.46), caseGlow);
+    mesh(cube, model([-0.08,0.68,0.76], [2.38,0.08,0.22]), "#8996a0", focusAlpha("caseRibs", 0.72));
+  }
+}
+
 function drawTransmission() {
   const g = gearConfigs[state.gear];
   const activeGear = state.gear === "N" ? null : `gear${state.gear}`;
@@ -751,25 +818,11 @@ function drawTransmission() {
   const internalAlpha = state.caseMode === "case" ? 0.16 : 1;
   const labelInternals = state.caseMode !== "case";
   const routeActive = state.inspectionMode !== "overview";
-  if (state.caseMode === "cutaway") {
-    mesh(cube, model([0,-0.88,0.08], [3.0,0.08,1.08]), "#182331", focusAlpha("case", 0.72));
-    mesh(cube, model([0,-0.08,1.1], [3.0,0.72,0.06]), "#182331", focusAlpha("case", 0.46));
-    mesh(cube, model([0,-0.08,-0.98], [3.0,0.72,0.04]), "#182331", focusAlpha("case", 0.28));
-    mesh(cube, model([-2.72,-0.1,0.06], [0.18,0.72,1.0]), "#263546", focusAlpha("bellhousing", 0.42));
-    mesh(cube, model([2.88,-0.1,0.06], [0.18,0.68,0.9]), "#263546", focusAlpha("case", 0.42));
-  } else if (state.caseMode === "exposed") {
-    mesh(cube, model([0,-0.9,0.08], [2.92,0.04,0.95]), "#101822", focusAlpha("case", 0.34));
-    mesh(cube, model([-2.72,-0.1,0.06], [0.12,0.54,0.78]), "#263546", focusAlpha("bellhousing", 0.28));
-    mesh(cube, model([2.86,-0.1,0.06], [0.12,0.5,0.72]), "#263546", focusAlpha("case", 0.28));
-  } else {
-    mesh(cube, model([0,-0.1,0.04], [3.02,0.92,1.08]), "#1d2b3a", focusAlpha("case", 0.9));
-    mesh(cube, model([0,0.66,-0.1], [2.52,0.18,0.78]), "#314252", focusAlpha("case", 0.92));
-    mesh(cube, model([-2.75,0.0,0.04], [0.36,0.74,0.96]), "#3b4a57", focusAlpha("bellhousing", 0.92));
-    mesh(cube, model([2.9,-0.04,0.04], [0.28,0.66,0.84]), "#3b4a57", focusAlpha("case", 0.92));
+  drawCaseFoundation(state.caseMode);
+  if (state.caseMode === "case") {
     mesh(cyl, model([-3.12,0.34,-0.08], [0.18,0.22,0.18], [0,0,Math.PI/2]), "#81909d", focusAlpha("inputShaft", 0.95));
     mesh(cyl, model([3.16,0.34,-0.08], [0.14,0.28,0.14], [0,0,Math.PI/2]), "#81909d", focusAlpha("outputShaft", 0.95));
   }
-  [[-2.82,0.62,-0.74],[-2.82,-0.68,-0.74],[2.98,0.54,-0.74],[2.98,-0.62,-0.74]].forEach((p) => mesh(cyl, model(p, [0.055,0.045,0.055]), "#9aa8b5", focusAlpha("caseRibs", 1)));
 
   drawShaft("inputShaft", [-2.95,0.34,-0.08], [-2.12,0.34,-0.08], "#d7e1e9", internalAlpha);
   drawShaft("outputShaft", [-2.12,0.34,-0.08], [2.95,0.34,-0.08], "#b8c5cf", internalAlpha);
@@ -837,12 +890,16 @@ function drawTransmission() {
     addHotspot([0.95,-0.78,0.92], "oilPassages", "?", "inspect");
     addHotspot([0.28,0.94,0.28], "synchroDetails", "?", "inspect");
   } else {
-    addLabel([0,1.08,-0.58], "Assembled MT82 Case");
-    addInspectionMarker([-2.25,0.95,-0.7], "?", "Case ribs / seals");
-    addInspectionMarker([-2.9,0.62,-0.16], "?", "Clutch input interface");
-    addHotspot([0,0.86,-0.58], "case", "CASE");
-    addHotspot([-2.25,1.14,-0.7], "caseRibs", "?", "inspect");
-    addHotspot([-2.9,0.82,-0.16], "clutchInterface", "?", "inspect");
+    addLabel([-2.62,1.16,-0.62], "Bellhousing", "route-sub");
+    addLabel([0,1.32,-0.56], "Main Gear Case", "route");
+    addLabel([2.48,0.92,-0.48], "Rear Housing", "route-sub");
+    addHotspot([-2.66,0.84,-0.58], "bellhousing", "BH");
+    addHotspot([0.1,1.02,-0.52], "case", "MC");
+    addHotspot([2.46,0.66,-0.42], "tailHousing", "RH");
+    addInspectionMarker([-1.15,1.18,-0.72], "?", "Casting ribs / seals");
+    addInspectionMarker([-2.92,0.62,-0.16], "?", "Clutch input interface");
+    addHotspot([-1.15,1.34,-0.72], "caseRibs", "?", "inspect");
+    addHotspot([-2.92,0.82,-0.16], "clutchInterface", "?", "inspect");
   }
 }
 
